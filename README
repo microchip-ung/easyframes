@@ -1,5 +1,6 @@
-WARNING: This version of nemesis is hacked/changed in various ways by MSCC. The
-changes are not likely to be accepted upstream.
+WARNING: This is a fork of the Nemesis project. This fork will most likely not
+be useful outside MSCC. We encourage you to use and support the original Nemesis
+project.
 
 ====================================================================
 N E M E S I S  -  TCP/IP Packet Injection  [README]

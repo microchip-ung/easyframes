@@ -1,15 +1,14 @@
 /*
- * $Id: nemesis-arp.c,v 1.1.1.1 2003/10/31 21:29:36 jnathan Exp $
- *
- * THE NEMESIS PROJECT
+ * Easy Frames Project
  * Copyright (C) 1999, 2000, 2001 Mark Grimes <mark@stateful.net>
  * Copyright (C) 2001 - 2003 Jeff Nathan <jeff@snort.org>
+ * Copyright (C) 2017 Microsemi <allan.nielsen@microsemi.com>
  *
- * nemesis-arp.c (ARP/RARP Packet Injector)
+ * ef-arp.c (ARP/RARP Packet Injector)
  *
  */
 
-#include "nemesis.h"
+#include "ef.h"
 
 static ETHERhdr etherhdr;
 static ARPhdr arphdr;
@@ -47,7 +46,7 @@ static int buildarp(ETHERhdr *eth, ARPhdr *arp, FileData *pd, char *device, int 
 #endif
 
     if ((l2 = libnet_open_link_interface(device, errbuf)) == NULL) {
-        nemesis_device_failure(INJECTION_LINK, (const char *)device);
+        ef_device_failure(INJECTION_LINK, (const char *)device);
         return -1;
     }
 
@@ -66,8 +65,8 @@ static int buildarp(ETHERhdr *eth, ARPhdr *arp, FileData *pd, char *device, int 
     n = libnet_write_link_layer(l2, device, pkt,
                                 LIBNET_ETH_H + LIBNET_ARP_H + pd->file_s);
 
-    if (verbose == 2) nemesis_hexdump(pkt, arp_packetlen, HEX_ASCII_DECODE);
-    if (verbose == 3) nemesis_hexdump(pkt, arp_packetlen, HEX_RAW_DECODE);
+    if (verbose == 2) ef_hexdump(pkt, arp_packetlen, HEX_ASCII_DECODE);
+    if (verbose == 3) ef_hexdump(pkt, arp_packetlen, HEX_RAW_DECODE);
 
     if (n != arp_packetlen) {
         fprintf(stderr,
@@ -79,11 +78,11 @@ static int buildarp(ETHERhdr *eth, ARPhdr *arp, FileData *pd, char *device, int 
             if (memcmp(eth->ether_dhost, (void *)&one, 6)) {
                 printf("Wrote %d byte unicast ARP request packet through "
                        "linktype %s.\n",
-                       n, nemesis_lookup_linktype(l2->linktype));
+                       n, ef_lookup_linktype(l2->linktype));
             } else {
                 printf("Wrote %d byte %s packet through linktype %s.\n", n,
                        (eth->ether_type == ETHERTYPE_ARP ? "ARP" : "RARP"),
-                       nemesis_lookup_linktype(l2->linktype));
+                       ef_lookup_linktype(l2->linktype));
             }
         }
     }
@@ -93,7 +92,7 @@ static int buildarp(ETHERhdr *eth, ARPhdr *arp, FileData *pd, char *device, int 
     return (n);
 }
 
-void nemesis_arp(int argc, char **argv) {
+void ef_arp(int argc, char **argv) {
     if (argc > 1 && !strncmp(argv[1], "help", 4)) arp_usage(argv[0]);
 
     arp_initdata();
@@ -169,7 +168,7 @@ static void arp_validatedata(void) {
     }
 
     /* Determine if there's a source hardware address set */
-    if ((nemesis_check_link(&etherhdr, device)) < 0) {
+    if ((ef_check_link(&etherhdr, device)) < 0) {
         fprintf(stderr, "ERROR: Cannot retrieve hardware address of %s.\n",
                 device);
         arp_exit(1);
@@ -240,7 +239,7 @@ static void arp_cmdline(int argc, char **argv) {
             }
             break;
         case 'D': /* ARP target IP address */
-            if (nemesis_name_resolve(optarg, (u_int32_t *)&arphdr.ar_tpa) < 0) {
+            if (ef_name_resolve(optarg, (u_int32_t *)&arphdr.ar_tpa) < 0) {
                 fprintf(stderr,
                         "ERROR: Invalid destination IP address: "
                         "\"%s\".\n",
@@ -305,7 +304,7 @@ static void arp_cmdline(int argc, char **argv) {
             memset(arphdr.ar_tha, 0xff, 6);
             break;
         case 'S': /* ARP sender IP address */
-            if (nemesis_name_resolve(optarg, (u_int32_t *)&arphdr.ar_spa) < 0) {
+            if (ef_name_resolve(optarg, (u_int32_t *)&arphdr.ar_spa) < 0) {
                 fprintf(stderr,
                         "ERROR: Invalid source IP address: \"%s\"."
                         "\n",
@@ -344,8 +343,8 @@ static int arp_exit(int code) {
 
 static void arp_verbose(void) {
     if (verbose) {
-        nemesis_printeth(&etherhdr);
-        nemesis_printarp(&arphdr);
+        ef_printeth(&etherhdr);
+        ef_printarp(&arphdr);
     }
     return;
 }

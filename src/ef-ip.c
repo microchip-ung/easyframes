@@ -1,15 +1,14 @@
 /*
- * $Id: nemesis-ip.c,v 1.1.1.1 2003/10/31 21:29:37 jnathan Exp $
- *
- * THE NEMESIS PROJECT
+ * Easy Frames Project
  * Copyright (C) 2002, 2003 Jeff Nathan <jeff@snort.org>
  * Original version submitted by ocsic <pisco@private.as>
+ * Copyright (C) 2017 Microsemi <allan.nielsen@microsemi.com>
  *
- * nemesis-ip.c (IP Packet Injector)
+ * ef-ip.c (IP Packet Injector)
  *
  */
 
-#include "nemesis.h"
+#include "ef.h"
 
 static ETHERhdr etherhdr;
 static IPhdr iphdr;
@@ -41,13 +40,13 @@ int buildip(ETHERhdr *eth, IPhdr *ip, FileData *pd, FileData *ipod, char *device
     if (got_link) /* data link layer transport */
     {
         if ((l2 = libnet_open_link_interface(device, errbuf)) == NULL) {
-            nemesis_device_failure(INJECTION_LINK, (const char *)device);
+            ef_device_failure(INJECTION_LINK, (const char *)device);
             return -1;
         }
         link_offset = LIBNET_ETH_H;
     } else {
         if ((sockfd = libnet_open_raw_sock(IPPROTO_RAW)) < 0) {
-            nemesis_device_failure(INJECTION_RAW, (const char *)NULL);
+            ef_device_failure(INJECTION_RAW, (const char *)NULL);
             return -1;
         }
         if ((setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, (const void *)&sockbuff,
@@ -97,8 +96,8 @@ int buildip(ETHERhdr *eth, IPhdr *ip, FileData *pd, FileData *ipod, char *device
     else
         n = libnet_write_ip(sockfd, pkt, ip_packetlen);
 
-    if (verbose == 2) nemesis_hexdump(pkt, ip_packetlen, HEX_ASCII_DECODE);
-    if (verbose == 3) nemesis_hexdump(pkt, ip_packetlen, HEX_RAW_DECODE);
+    if (verbose == 2) ef_hexdump(pkt, ip_packetlen, HEX_ASCII_DECODE);
+    if (verbose == 3) ef_hexdump(pkt, ip_packetlen, HEX_RAW_DECODE);
 
     if (n != ip_packetlen) {
         fprintf(stderr,
@@ -109,7 +108,7 @@ int buildip(ETHERhdr *eth, IPhdr *ip, FileData *pd, FileData *ipod, char *device
         if (verbose) {
             if (got_link)
                 printf("Wrote %d byte IP packet through linktype %s.\n", n,
-                       nemesis_lookup_linktype(l2->linktype));
+                       ef_lookup_linktype(l2->linktype));
             else
                 printf("Wrote %d byte IP packet\n", n);
         }
@@ -122,10 +121,10 @@ int buildip(ETHERhdr *eth, IPhdr *ip, FileData *pd, FileData *ipod, char *device
     return n;
 }
 
-void nemesis_ip(int argc, char **argv) {
+void ef_ip(int argc, char **argv) {
     if (argc > 1 && !strncmp(argv[1], "help", 4)) ip_usage(argv[0]);
 
-    if (nemesis_seedrand() < 0)
+    if (ef_seedrand() < 0)
         fprintf(stderr, "ERROR: Unable to seed random number generator.\n");
 
     ip_initdata();
@@ -205,7 +204,7 @@ static void ip_validatedata(void) {
      * hardware address, try to determine the source address automatically
      */
     if (got_link) {
-        if ((nemesis_check_link(&etherhdr, device)) < 0) {
+        if ((ef_check_link(&etherhdr, device)) < 0) {
             fprintf(stderr,
                     "ERROR: cannot retrieve hardware address of "
                     "%s.\n",
@@ -262,7 +261,7 @@ static void ip_cmdline(int argc, char **argv) {
             }
             break;
         case 'D': /* destination IP address */
-            if ((nemesis_name_resolve(optarg,
+            if ((ef_name_resolve(optarg,
                                       (u_int32_t *)&iphdr.ip_dst.s_addr)) < 0) {
                 fprintf(stderr,
                         "ERROR: Invalid destination IP address: "
@@ -319,7 +318,7 @@ static void ip_cmdline(int argc, char **argv) {
             }
             break;
         case 'S': /* source IP address */
-            if ((nemesis_name_resolve(optarg,
+            if ((ef_name_resolve(optarg,
                                       (u_int32_t *)&iphdr.ip_src.s_addr)) < 0) {
                 fprintf(stderr,
                         "ERROR: Invalid source IP address: \"%s\"."
@@ -364,9 +363,9 @@ static int ip_exit(int code) {
 
 static void ip_verbose(void) {
     if (verbose) {
-        if (got_link) nemesis_printeth(&etherhdr);
+        if (got_link) ef_printeth(&etherhdr);
 
-        nemesis_printip(&iphdr);
+        ef_printip(&iphdr);
     }
     return;
 }

@@ -1,10 +1,9 @@
 /*
- * $Id: nemesis.h,v 1.2 2004/05/12 23:21:38 jnathan Exp $
- *
- * THE NEMESIS PROJECT
+ * Easy Frames Project
  * Copyright (C) 2001 - 2003 Jeff Nathan <jeff@snort.org>
+ * Copyright (C) 2017 Microsemi <allan.nielsen@microsemi.com>
  *
- * nemesis.h
+ * ef.h
  *
  */
 
@@ -155,11 +154,11 @@ u_int32_t xgetint32(const char *);
 u_int16_t xgetint16(const char *);
 u_int8_t xgetint8(const char *);
 // int gmt2local(time_t);
-int nemesis_name_resolve(char *, u_int32_t *);
-int nemesis_check_link(ETHERhdr *, char *);
-int nemesis_getdev(int, char **);
-char *nemesis_lookup_linktype(int);
-int nemesis_seedrand(void);
+int ef_name_resolve(char *, u_int32_t *);
+int ef_check_link(ETHERhdr *, char *);
+int ef_getdev(int, char **);
+char *ef_lookup_linktype(int);
+int ef_seedrand(void);
 int parsefragoptions(IPhdr *, char *);
 int parse_hex_string(const char *, u_int8_t *, int);
 
@@ -167,29 +166,29 @@ int parse_hex_string(const char *, u_int8_t *, int);
 int builddatafromfile(const size_t, FileData *, const char *, const u_int32_t);
 
 /* printout functions */
-void nemesis_hexdump(u_int8_t *, u_int32_t, int);
-void nemesis_device_failure(int, const char *);
-void nemesis_maketitle(char *, const char *, const char *);
-void nemesis_printeth(ETHERhdr *);
-void nemesis_printarp(ARPhdr *);
-void nemesis_printip(IPhdr *);
-void nemesis_printtcp(TCPhdr *);
-void nemesis_printudp(UDPhdr *);
-void nemesis_printicmp(ICMPhdr *, int);
-void nemesis_printrip(RIPhdr *);
-void nemesis_printtitle(const char *);
-void nemesis_usage(char *);
+void ef_hexdump(u_int8_t *, u_int32_t, int);
+void ef_device_failure(int, const char *);
+void ef_maketitle(char *, const char *, const char *);
+void ef_printeth(ETHERhdr *);
+void ef_printarp(ARPhdr *);
+void ef_printip(IPhdr *);
+void ef_printtcp(TCPhdr *);
+void ef_printudp(UDPhdr *);
+void ef_printicmp(ICMPhdr *, int);
+void ef_printrip(RIPhdr *);
+void ef_printtitle(const char *);
+void ef_usage(char *);
 
 /* injection functions */
-void nemesis_arp(int, char **);
-void nemesis_dns(int, char **);
-void nemesis_ethernet(int, char **);
-void nemesis_icmp(int, char **);
-void nemesis_igmp(int, char **);
-void nemesis_ip(int, char **);
-void nemesis_rip(int, char **);
-void nemesis_tcp(int, char **);
-void nemesis_udp(int, char **);
-void nemesis_raw(int, char **);
+void ef_arp(int, char **);
+void ef_dns(int, char **);
+void ef_ethernet(int, char **);
+void ef_icmp(int, char **);
+void ef_igmp(int, char **);
+void ef_ip(int, char **);
+void ef_rip(int, char **);
+void ef_tcp(int, char **);
+void ef_udp(int, char **);
+void ef_raw(int, char **);
 
 #endif /* __NEMESIS_H__ */

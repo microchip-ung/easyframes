@@ -1,14 +1,13 @@
 /*
- * $Id: nemesis-ethernet.c,v 1.1.1.1 2003/10/31 21:29:36 jnathan Exp $
- *
- * THE NEMESIS PROJECT
+ * Easy Frames Project
  * Copyright (C) 2002, 2003 Jeff Nathan <jeff@snort.org>
+ * Copyright (C) 2017 Microsemi <allan.nielsen@microsemi.com>
  *
- * nemesis-ethernet.c (Ethernet Packet Injector)
+ * ef-ethernet.c (Ethernet Packet Injector)
  *
  */
 
-#include "nemesis.h"
+#include "ef.h"
 
 static ETHERhdr etherhdr;
 static char *device = NULL; /* Ethernet device */
@@ -28,7 +27,7 @@ static int build_raw(ETHERhdr *eth, char *device) {
     struct libnet_link_int *l2 = NULL;
 
     if ((l2 = libnet_open_link_interface(device, errbuf)) == NULL) {
-        nemesis_device_failure(INJECTION_LINK, (const char *)device);
+        ef_device_failure(INJECTION_LINK, (const char *)device);
         return -1;
     }
 
@@ -39,19 +38,19 @@ static int build_raw(ETHERhdr *eth, char *device) {
 #ifdef DEBUG
     printf("DEBUG: payload_size is %u.\n", payload_size);
 #endif
-    if (verbose == 2) nemesis_hexdump(payload, payload_size, HEX_ASCII_DECODE);
-    if (verbose == 3) nemesis_hexdump(payload, payload_size, HEX_RAW_DECODE);
+    if (verbose == 2) ef_hexdump(payload, payload_size, HEX_ASCII_DECODE);
+    if (verbose == 3) ef_hexdump(payload, payload_size, HEX_RAW_DECODE);
 
     if (verbose) {
         printf("Wrote %d byte Ethernet type %hu packet through linktype %s.\n",
-               n, eth->ether_type, nemesis_lookup_linktype(l2->linktype));
+               n, eth->ether_type, ef_lookup_linktype(l2->linktype));
     }
 
     if (l2 != NULL) libnet_close_link_interface(l2);
     return n;
 }
 
-void nemesis_raw(int argc, char **argv) {
+void ef_raw(int argc, char **argv) {
     if (argc > 1 && !strncmp(argv[1], "help", 4)) raw_usage(argv[0]);
 
     raw_cmdline(argc, argv);

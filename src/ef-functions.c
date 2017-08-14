@@ -1,10 +1,9 @@
 /*
- * $Id: nemesis-functions.c,v 1.2 2004/10/07 01:20:56 jnathan Exp $
- *
- * THE NEMESIS PROJECT
+ * Easy Frames Project
  * Copyright (C) 2002, 2003 Jeff Nathan <jeff@snort.org>
+ * Copyright (C) 2017 Microsemi <allan.nielsen@microsemi.com>
  *
- * nemesis-functions.c (nemesis utility functions)
+ * ef-functions.c (ef utility functions)
  *
  */
 
@@ -18,7 +17,7 @@
 #include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
-#include "nemesis.h"
+#include "ef.h"
 
 const char *version = " -=- The NEMESIS Project Version 1.4";
 
@@ -207,7 +206,7 @@ int parsefragoptions(IPhdr *iph, char *str) {
  *
  * @return 0 on sucess, -1 on failure
  */
-int nemesis_name_resolve(char *hostname, u_int32_t *address) {
+int ef_name_resolve(char *hostname, u_int32_t *address) {
     struct in_addr saddr;
     struct hostent *hp = NULL;
     extern int h_errno;
@@ -225,7 +224,7 @@ int nemesis_name_resolve(char *hostname, u_int32_t *address) {
         /* Do not blindly disregard the size of the address returned */
         if (hp->h_length != 4) {
             fprintf(stderr,
-                    "ERROR: nemesis_name_resolve() received a non IPv4 "
+                    "ERROR: ef_name_resolve() received a non IPv4 "
                     "address.\n");
             return -1;
         }
@@ -249,7 +248,7 @@ int nemesis_name_resolve(char *hostname, u_int32_t *address) {
  *
  * @return 0 on sucess, -1 on failure
  */
-int nemesis_check_link(ETHERhdr *eth, char *device) {
+int ef_check_link(ETHERhdr *eth, char *device) {
     int i;
     struct ether_addr *e = NULL;
     struct libnet_link_int l2;
@@ -280,7 +279,7 @@ int nemesis_check_link(ETHERhdr *eth, char *device) {
  * @return char * containing the appropriate linktype or Unknown on a failed
  *         match.
  */
-char *nemesis_lookup_linktype(int linktype) {
+char *ef_lookup_linktype(int linktype) {
     char *dlt;
 
     switch (linktype) {
@@ -347,7 +346,7 @@ char *nemesis_lookup_linktype(int linktype) {
  *
  * @return 0 on success, -1 on failure
  */
-int nemesis_seedrand(void) {
+int ef_seedrand(void) {
     srandom(time(NULL));
     return 0;
 }

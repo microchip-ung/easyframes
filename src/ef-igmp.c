@@ -1,15 +1,14 @@
 /*
- * $Id: nemesis-igmp.c,v 1.1.1.1 2003/10/31 21:29:37 jnathan Exp $
- *
- * THE NEMESIS PROJECT
+ * Easy Frames Project
  * Copyright (C) 1999, 2000, 2001 Mark Grimes <mark@stateful.net>
  * Copyright (C) 2001 - 2003 Jeff Nathan <jeff@snort.org>
+ * Copyright (C) 2017 Microsemi <allan.nielsen@microsemi.com>
  *
- * nemesis-igmp.c (IGMP Packet Injector)
+ * ef-igmp.c (IGMP Packet Injector)
  *
  */
 
-#include "nemesis.h"
+#include "ef.h"
 
 static ETHERhdr etherhdr;
 static IPhdr iphdr;
@@ -44,13 +43,13 @@ int buildigmp(ETHERhdr *eth, IPhdr *ip, IGMPhdr *igmp, FileData *pd,
     if (got_link) /* data link layer transport */
     {
         if ((l2 = libnet_open_link_interface(device, errbuf)) == NULL) {
-            nemesis_device_failure(INJECTION_LINK, (const char *)device);
+            ef_device_failure(INJECTION_LINK, (const char *)device);
             return -1;
         }
         link_offset = LIBNET_ETH_H;
     } else {
         if ((sockfd = libnet_open_raw_sock(IPPROTO_RAW)) < 0) {
-            nemesis_device_failure(INJECTION_RAW, (const char *)NULL);
+            ef_device_failure(INJECTION_RAW, (const char *)NULL);
             return -1;
         }
         if ((setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, (const void *)&sockbuff,
@@ -108,8 +107,8 @@ int buildigmp(ETHERhdr *eth, IPhdr *ip, IGMPhdr *igmp, FileData *pd,
     else
         n = libnet_write_ip(sockfd, pkt, igmp_packetlen);
 
-    if (verbose == 2) nemesis_hexdump(pkt, igmp_packetlen, HEX_ASCII_DECODE);
-    if (verbose == 3) nemesis_hexdump(pkt, igmp_packetlen, HEX_RAW_DECODE);
+    if (verbose == 2) ef_hexdump(pkt, igmp_packetlen, HEX_ASCII_DECODE);
+    if (verbose == 3) ef_hexdump(pkt, igmp_packetlen, HEX_RAW_DECODE);
 
     if (n != igmp_packetlen) {
         fprintf(stderr,
@@ -120,7 +119,7 @@ int buildigmp(ETHERhdr *eth, IPhdr *ip, IGMPhdr *igmp, FileData *pd,
         if (verbose) {
             if (got_link)
                 printf("Wrote %d byte IGMP packet through linktype %s.\n", n,
-                       nemesis_lookup_linktype(l2->linktype));
+                       ef_lookup_linktype(l2->linktype));
             else
                 printf("Wrote %d byte IGMP packet.\n", n);
         }
@@ -133,10 +132,10 @@ int buildigmp(ETHERhdr *eth, IPhdr *ip, IGMPhdr *igmp, FileData *pd,
     return n;
 }
 
-void nemesis_igmp(int argc, char **argv) {
+void ef_igmp(int argc, char **argv) {
     if (argc > 1 && !strncmp(argv[1], "help", 4)) igmp_usage(argv[0]);
 
-    if (nemesis_seedrand() < 0)
+    if (ef_seedrand() < 0)
         fprintf(stderr, "ERROR: Unable to seed random number generator.\n");
 
     igmp_initdata();
@@ -218,7 +217,7 @@ static void igmp_validatedata(void) {
      * hardware address, try to determine the source address automatically
      */
     if (got_link) {
-        if ((nemesis_check_link(&etherhdr, device)) < 0) {
+        if ((ef_check_link(&etherhdr, device)) < 0) {
             fprintf(stderr,
                     "ERROR: Cannot retrieve hardware address of "
                     "%s.\n",
@@ -233,9 +232,9 @@ static void igmp_validatedata(void) {
     if (!got_type) igmphdr.igmp_type = IGMP_V1_MEMBERSHIP_REPORT;
     if (!got_code) igmphdr.igmp_code = 0;
     if (!got_group) {
-        nemesis_name_resolve("224.0.0.1",
+        ef_name_resolve("224.0.0.1",
                              (u_int32_t *)&igmphdr.igmp_group.s_addr);
-        nemesis_name_resolve("224.0.0.1", (u_int32_t *)&iphdr.ip_dst.s_addr);
+        ef_name_resolve("224.0.0.1", (u_int32_t *)&iphdr.ip_dst.s_addr);
     }
     return;
 }
@@ -293,7 +292,7 @@ static void igmp_cmdline(int argc, char **argv) {
             }
             break;
         case 'D': /* destination IP address */
-            if ((nemesis_name_resolve(optarg,
+            if ((ef_name_resolve(optarg,
                                       (u_int32_t *)&iphdr.ip_dst.s_addr)) < 0) {
                 fprintf(stderr,
                         "ERROR: Invalid destination IP address: "
@@ -314,7 +313,7 @@ static void igmp_cmdline(int argc, char **argv) {
                 etherhdr.ether_shost[i] = (u_int8_t)addr_tmp[i];
             break;
         case 'i': /* IGMP group address */
-            if ((nemesis_name_resolve(
+            if ((ef_name_resolve(
                         optarg, (u_int32_t *)&igmphdr.igmp_group.s_addr)) < 0) {
                 fprintf(stderr,
                         "ERROR: Invalid IGMP group address: \"%s\"."
@@ -364,7 +363,7 @@ static void igmp_cmdline(int argc, char **argv) {
             }
             break;
         case 'S': /* source IP address */
-            if ((nemesis_name_resolve(optarg,
+            if ((ef_name_resolve(optarg,
                                       (u_int32_t *)&iphdr.ip_src.s_addr)) < 0) {
                 fprintf(stderr,
                         "ERROR: Invalid source IP address: \"%s\"."
@@ -409,9 +408,9 @@ static int igmp_exit(int code) {
 
 static void igmp_verbose(void) {
     if (verbose) {
-        if (got_link) nemesis_printeth(&etherhdr);
+        if (got_link) ef_printeth(&etherhdr);
 
-        nemesis_printip(&iphdr);
+        ef_printip(&iphdr);
         printf("         [IGMP Type] %hu\n", igmphdr.igmp_type);
         printf("         [IGMP Code] %hu\n", igmphdr.igmp_code);
         printf("[IGMP group address] %s\n", inet_ntoa(igmphdr.igmp_group));

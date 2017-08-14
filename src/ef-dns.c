@@ -1,15 +1,14 @@
 /*
- * $Id: nemesis-dns.c,v 1.1.1.1 2003/10/31 21:29:36 jnathan Exp $
- *
- * THE NEMESIS PROJECT
+ * Easy Frames Project
  * Copyright (C) 1999, 2000, 2001 Mark Grimes <mark@stateful.net>
  * Copyright (C) 2001 - 2003 Jeff Nathan <jeff@snort.org>
+ * Copyright (C) 2017 Microsemi <allan.nielsen@microsemi.com>
  *
- * nemesis-dns.c (DNS Packet Injector)
+ * ef-dns.c (DNS Packet Injector)
  *
  */
 
-#include "nemesis.h"
+#include "ef.h"
 
 static int state; /* default to UDP */
 static ETHERhdr etherhdr;
@@ -48,13 +47,13 @@ int builddns(ETHERhdr *eth, IPhdr *ip, TCPhdr *tcp, UDPhdr *udp, DNShdr *dns,
     if (got_link) /* data link layer transport */
     {
         if ((l2 = libnet_open_link_interface(device, errbuf)) == NULL) {
-            nemesis_device_failure(INJECTION_LINK, (const char *)device);
+            ef_device_failure(INJECTION_LINK, (const char *)device);
             return -1;
         }
         link_offset = LIBNET_ETH_H;
     } else {
         if ((sockfd = libnet_open_raw_sock(IPPROTO_RAW)) < 0) {
-            nemesis_device_failure(INJECTION_RAW, (const char *)NULL);
+            ef_device_failure(INJECTION_RAW, (const char *)NULL);
             return -1;
         }
         if ((setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, (const void *)&sockbuff,
@@ -143,8 +142,8 @@ int builddns(ETHERhdr *eth, IPhdr *ip, TCPhdr *tcp, UDPhdr *udp, DNShdr *dns,
     else
         n = libnet_write_ip(sockfd, pkt, dns_packetlen);
 
-    if (verbose == 2) nemesis_hexdump(pkt, dns_packetlen, HEX_ASCII_DECODE);
-    if (verbose == 3) nemesis_hexdump(pkt, dns_packetlen, HEX_RAW_DECODE);
+    if (verbose == 2) ef_hexdump(pkt, dns_packetlen, HEX_ASCII_DECODE);
+    if (verbose == 3) ef_hexdump(pkt, dns_packetlen, HEX_RAW_DECODE);
 
     if (n != dns_packetlen) {
         fprintf(stderr,
@@ -157,7 +156,7 @@ int builddns(ETHERhdr *eth, IPhdr *ip, TCPhdr *tcp, UDPhdr *udp, DNShdr *dns,
                 printf("Wrote %d byte DNS (%s) packet through "
                        "linktype %s.\n",
                        n, ((state == 0) ? "UDP" : "TCP"),
-                       nemesis_lookup_linktype(l2->linktype));
+                       ef_lookup_linktype(l2->linktype));
             } else {
                 printf("Wrote %d byte DNS (%s) packet\n", n,
                        ((state == 1) ? "UDP" : "TCP"));
@@ -172,10 +171,10 @@ int builddns(ETHERhdr *eth, IPhdr *ip, TCPhdr *tcp, UDPhdr *udp, DNShdr *dns,
     return n;
 }
 
-void nemesis_dns(int argc, char **argv) {
+void ef_dns(int argc, char **argv) {
     if (argc > 1 && !strncmp(argv[1], "help", 4)) dns_usage(argv[0]);
 
-    if (nemesis_seedrand() < 0)
+    if (ef_seedrand() < 0)
         fprintf(stderr, "ERROR: Unable to seed random number generator.\n");
 
     dns_initdata();
@@ -287,7 +286,7 @@ static void dns_validatedata(void) {
      * hardware address, try to determine the source address automatically
      */
     if (got_link) {
-        if ((nemesis_check_link(&etherhdr, device)) < 0) {
+        if ((ef_check_link(&etherhdr, device)) < 0) {
             fprintf(stderr, "ERROR: cannot retrieve hardware address of %s.\n",
                     device);
             dns_exit(1);
@@ -379,7 +378,7 @@ static void dns_cmdline(int argc, char **argv) {
             }
             break;
         case 'D': /* destination IP address */
-            if ((nemesis_name_resolve(optarg,
+            if ((ef_name_resolve(optarg,
                                       (u_int32_t *)&iphdr.ip_dst.s_addr)) < 0) {
                 fprintf(stderr,
                         "ERROR: Invalid destination IP address: "
@@ -481,7 +480,7 @@ static void dns_cmdline(int argc, char **argv) {
             tcphdr.th_seq = xgetint32(optarg);
             break;
         case 'S': /* source IP address */
-            if ((nemesis_name_resolve(optarg,
+            if ((ef_name_resolve(optarg,
                                       (u_int32_t *)&iphdr.ip_src.s_addr)) < 0) {
                 fprintf(stderr,
                         "ERROR: Invalid source IP address: \"%s\"."
@@ -547,14 +546,14 @@ static int dns_exit(int code) {
 
 static void dns_verbose(void) {
     if (verbose) {
-        if (got_link) nemesis_printeth(&etherhdr);
+        if (got_link) ef_printeth(&etherhdr);
 
-        nemesis_printip(&iphdr);
+        ef_printip(&iphdr);
 
         if (state)
-            nemesis_printtcp(&tcphdr);
+            ef_printtcp(&tcphdr);
         else
-            nemesis_printudp(&udphdr);
+            ef_printudp(&udphdr);
 
         printf("   [DNS # Questions] %hu\n", dnshdr.num_q);
         printf("  [DNS # Answer RRs] %hu\n", dnshdr.num_answ_rr);

@@ -1,10 +1,9 @@
 /*
- * $Id: nemesis-fileio.c,v 1.1.1.1 2003/10/31 21:29:36 jnathan Exp $
- *
- * THE NEMESIS PROJECT
+ * Easy Frames Project
  * Copyright (C) 2002, 2003 Jeff Nathan <jeff@snort.org>
+ * Copyright (C) 2017 Microsemi <allan.nielsen@microsemi.com>
  *
- * nemesis-functions.c (nemesis utility functions)
+ * ef-functions.c (ef utility functions)
  *
  */
 
@@ -13,13 +12,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "nemesis.h"
+#include "ef.h"
 
 #if 0
 char *pcap_outfile;     /* pcap output file name */
 #endif
 
-static int nemesis_readfile(u_int8_t *, const char *, const size_t,
+static int ef_readfile(u_int8_t *, const char *, const size_t,
                             const u_int32_t);
 
 /**
@@ -33,7 +32,7 @@ static int nemesis_readfile(u_int8_t *, const char *, const size_t,
  *
  * @return number of bytes read on success, -1 on failure
  **/
-static int nemesis_readfile(u_int8_t *memory, const char *file,
+static int ef_readfile(u_int8_t *memory, const char *file,
                             const size_t maxsize, const u_int32_t mode) {
     int fd = -1, bytesread = 0;
     FILE *fp = NULL;
@@ -68,7 +67,7 @@ static int nemesis_readfile(u_int8_t *memory, const char *file,
 
 
 /**
- * Wrapper for calloc() and nemesis_readfile() for building packet payloads,
+ * Wrapper for calloc() and ef_readfile() for building packet payloads,
  * IP and TCP options from files.
  *
  * @param buffsize maximum number of bytes to read from file or stdin
@@ -90,7 +89,7 @@ int builddatafromfile(const size_t buffsize, FileData *memory, const char *file,
         return -1;
     }
 
-    if ((memory->file_s = nemesis_readfile(
+    if ((memory->file_s = ef_readfile(
                  memory->file_mem, file, buffsize,
                  (mode == PAYLOADMODE ? PAYLOADMODE : OPTIONSMODE))) < 0) {
         if (mode == PAYLOADMODE)

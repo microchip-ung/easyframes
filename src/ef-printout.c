@@ -1,10 +1,9 @@
 /*
- * $Id: nemesis-printout.c,v 1.1.1.1 2003/10/31 21:29:37 jnathan Exp $
- *
- * THE NEMESIS PROJECT
+ * Easy Frames Project
  * Copyright (C) 2002, 2003 Jeff Nathan <jeff@snort.org>
+ * Copyright (C) 2017 Microsemi <allan.nielsen@microsemi.com>
  *
- * nemesis-functions.c (nemesis utility functions)
+ * ef-functions.c (ef utility functions)
  *
  */
 
@@ -15,7 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "nemesis.h"
+#include "ef.h"
 
 
 /**
@@ -28,7 +27,7 @@
  *
  * @return void function
  */
-void nemesis_hexdump(u_int8_t *buf, u_int32_t len, int mode) {
+void ef_hexdump(u_int8_t *buf, u_int32_t len, int mode) {
     int c, linemod;
     u_int8_t *l, *p;
     char *dump, *predump, *postdump, dumpbuf[40];
@@ -86,7 +85,7 @@ void nemesis_hexdump(u_int8_t *buf, u_int32_t len, int mode) {
  *
  * @return void function
  */
-void nemesis_printeth(ETHERhdr *eth) {
+void ef_printeth(ETHERhdr *eth) {
     char *ethertype = "Unknown";
 
     switch (eth->ether_type) {
@@ -136,7 +135,7 @@ void nemesis_printeth(ETHERhdr *eth) {
  *
  * @return void function
  */
-void nemesis_printarp(ARPhdr *arp) {
+void ef_printarp(ARPhdr *arp) {
     char *src = NULL, *dst = NULL;
     char *opcode = "Unknown";
 
@@ -188,7 +187,7 @@ void nemesis_printarp(ARPhdr *arp) {
  *
  * @return void function
  */
-void nemesis_printip(IPhdr *ip) {
+void ef_printip(IPhdr *ip) {
     char *protoname = "Unknown";
     char *src = NULL, *dst = NULL;
 
@@ -537,7 +536,7 @@ void nemesis_printip(IPhdr *ip) {
  *
  * @return void function
  */
-void nemesis_printtcp(TCPhdr *tcp) {
+void ef_printtcp(TCPhdr *tcp) {
     printf("         [TCP Ports] %hu > %hu\n", tcp->th_sport, tcp->th_dport);
     STPUTS("         [TCP Flags] ");
     if (tcp->th_flags & TH_SYN) STPUTS("SYN ");
@@ -569,7 +568,7 @@ void nemesis_printtcp(TCPhdr *tcp) {
  *
  * @return void function
  */
-void nemesis_printudp(UDPhdr *udp) {
+void ef_printudp(UDPhdr *udp) {
     printf("         [UDP Ports] %hu > %hu\n\n", udp->uh_sport, udp->uh_dport);
     return;
 }
@@ -583,7 +582,7 @@ void nemesis_printudp(UDPhdr *udp) {
  *
  * @return void function
  */
-void nemesis_printicmp(ICMPhdr *icmp, int mode) {
+void ef_printicmp(ICMPhdr *icmp, int mode) {
     char *icmptype = "Unknown";
     char *icmpcode = "Unknown";
     char *mask = NULL, *gateway = NULL;
@@ -775,7 +774,7 @@ void nemesis_printicmp(ICMPhdr *icmp, int mode) {
  * @return void function
  *
  */
-void nemesis_printrip(RIPhdr *rip) {
+void ef_printrip(RIPhdr *rip) {
     char *cmd = "Unknown";
     char *family = "Unknown";
     char *addr = NULL, *mask = NULL, *hop = NULL;
@@ -841,7 +840,7 @@ void nemesis_printrip(RIPhdr *rip) {
  *
  * @return void function
  */
-void nemesis_device_failure(int mode, const char *device) {
+void ef_device_failure(int mode, const char *device) {
     if (mode == INJECTION_RAW)
         fprintf(stderr,
                 "ERROR: Unable to open raw socket for packet "
@@ -853,7 +852,7 @@ void nemesis_device_failure(int mode, const char *device) {
                 "injection: %s.\n",
                 device, errbuf);
 
-    fprintf(stderr, "You may need Administrator privileges to use nemesis.\n");
+    fprintf(stderr, "You may need Administrator privileges to use ef.\n");
 
     return;
 }

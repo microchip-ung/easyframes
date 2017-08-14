@@ -1,14 +1,13 @@
 /*
- * $Id: nemesis-ethernet.c,v 1.1.1.1 2003/10/31 21:29:36 jnathan Exp $
- *
- * THE NEMESIS PROJECT
+ * Easy Frames Project
  * Copyright (C) 2002, 2003 Jeff Nathan <jeff@snort.org>
+ * Copyright (C) 2017 Microsemi <allan.nielsen@microsemi.com>
  *
- * nemesis-ethernet.c (Ethernet Packet Injector)
+ * ef-ethernet.c (Ethernet Packet Injector)
  *
  */
 
-#include "nemesis.h"
+#include "ef.h"
 
 static ETHERhdr etherhdr;
 static char *device = NULL; /* Ethernet device */
@@ -34,7 +33,7 @@ static int build_ether(ETHERhdr *eth, char *device) {
 
 
     if ((l2 = libnet_open_link_interface(device, errbuf)) == NULL) {
-        nemesis_device_failure(INJECTION_LINK, (const char *)device);
+        ef_device_failure(INJECTION_LINK, (const char *)device);
         return -1;
     }
 
@@ -56,8 +55,8 @@ static int build_ether(ETHERhdr *eth, char *device) {
 #ifdef DEBUG
     printf("DEBUG: frame_size is %u.\n", frame_size);
 #endif
-    if (verbose == 2) nemesis_hexdump(pkt, frame_size, HEX_ASCII_DECODE);
-    if (verbose == 3) nemesis_hexdump(pkt, frame_size, HEX_RAW_DECODE);
+    if (verbose == 2) ef_hexdump(pkt, frame_size, HEX_ASCII_DECODE);
+    if (verbose == 3) ef_hexdump(pkt, frame_size, HEX_RAW_DECODE);
 
     switch (eth->ether_type) {
     case ETHERTYPE_IP:
@@ -84,18 +83,18 @@ static int build_ether(ETHERhdr *eth, char *device) {
         if (ethertype != NULL)
             printf("Wrote %d byte Ethernet type %s packet through linktype "
                    "%s.\n",
-                   n, ethertype, nemesis_lookup_linktype(l2->linktype));
+                   n, ethertype, ef_lookup_linktype(l2->linktype));
         else
             printf("Wrote %d byte Ethernet type %hu packet through linktype "
                    "%s.\n",
-                   n, eth->ether_type, nemesis_lookup_linktype(l2->linktype));
+                   n, eth->ether_type, ef_lookup_linktype(l2->linktype));
     }
     libnet_destroy_packet(&pkt);
     if (l2 != NULL) libnet_close_link_interface(l2);
     return (n);
 }
 
-void nemesis_ethernet(int argc, char **argv) {
+void ef_ethernet(int argc, char **argv) {
     if (argc > 1 && !strncmp(argv[1], "help", 4)) ethernet_usage(argv[0]);
 
     ethernet_initdata();
@@ -140,7 +139,7 @@ static void ethernet_validatedata(void) {
     }
 
     /* Determine if there's a source hardware address set */
-    if ((nemesis_check_link(&etherhdr, device)) < 0) {
+    if ((ef_check_link(&etherhdr, device)) < 0) {
         fprintf(stderr, "ERROR: Cannot retrieve hardware address of %s.\n",
                 device);
         ethernet_exit(1);
@@ -259,7 +258,7 @@ static int ethernet_exit(int code) {
 }
 
 static void ethernet_verbose(void) {
-    if (verbose) nemesis_printeth(&etherhdr);
+    if (verbose) ef_printeth(&etherhdr);
     return;
 }
 
