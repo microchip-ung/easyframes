@@ -1,9 +1,12 @@
-$Id: README,v 1.1.1.1 2003/10/31 21:29:35 jnathan Exp $
+WARNING: This version of nemesis is hacked/changed in various ways by MSCC. The
+changes are not likely to be accepted upstream.
+
 ====================================================================
 N E M E S I S  -  TCP/IP Packet Injection  [README]
 ====================================================================
 Copyright (C) 1999, 2000, 2001 Mark Grimes <mark@stateful.net>
 Copyright (C) 2001 - 2003 Jeff Nathan <jeff@snort.org>
+Copyright (C) 2017 Microsemi <allan.nielsen@microsemi.com>
 --------------------------------------------------------------------
 
 The Nemesis Project is designed to be a command line based, portable human 
