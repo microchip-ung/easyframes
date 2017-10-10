@@ -94,7 +94,7 @@ static int build_ether(ETHERhdr *eth, char *device) {
     return (n);
 }
 
-void ef_ethernet(int argc, char **argv) {
+void ef_eth(int argc, char **argv) {
     if (argc > 1 && !strncmp(argv[1], "help", 4)) ethernet_usage(argv[0]);
 
     ethernet_initdata();

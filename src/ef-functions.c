@@ -19,8 +19,6 @@
 #include <unistd.h>
 #include "ef.h"
 
-const char *version = " -=- The NEMESIS Project Version 1.4";
-
 char zero[ETHER_ADDR_LEN];
 char one[ETHER_ADDR_LEN] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 char errbuf[ERRBUFFSIZE];          /* all-purpose error buffer */

@@ -32,12 +32,12 @@ int main(int argc, char **argv) {
         argv += optind;
         argc -= optind;
         ef_dns(argc, argv);
-    } else if (!strncmp(avval, "ef-ethernet", 16)) {
-        ef_ethernet(argc, argv);
-    } else if (argc > 1 && !strncmp(argv[1], "ethernet", 8)) {
+    } else if (!strncmp(avval, "ef-eth", 16)) {
+        ef_eth(argc, argv);
+    } else if (argc > 1 && !strncmp(argv[1], "eth", 8)) {
         argv += optind;
         argc -= optind;
-        ef_ethernet(argc, argv);
+        ef_eth(argc, argv);
     } else if (!strncmp(avval, "ef-icmp", 12)) {
         ef_icmp(argc, argv);
     } else if (argc > 1 && !strncmp(argv[1], "icmp", 4)) {
@@ -88,11 +88,11 @@ int main(int argc, char **argv) {
 }
 
 void ef_usage(char *arg) {
-    printf("NEMESIS Usage:\n  %s [mode] [options]\n\n", arg);
-    printf("NEMESIS modes:\n"
+    printf("EF (easyframes) Usage:\n  %s [mode] [options]\n\n", arg);
+    printf("EF modes:\n"
            "  arp\n"
            "  dns\n"
-           "  ethernet\n"
+           "  eth\n"
            "  icmp\n"
            "  igmp\n"
            "  ip\n"
@@ -100,7 +100,7 @@ void ef_usage(char *arg) {
            "  rip\n"
            "  tcp\n"
            "  udp\n\n");
-    printf("NEMESIS options: \n"
+    printf("EF options: \n"
            "  To display options, specify a mode with the option \"help\".\n");
     putchar('\n');
     exit(1);

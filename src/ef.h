@@ -182,7 +182,7 @@ void ef_usage(char *);
 /* injection functions */
 void ef_arp(int, char **);
 void ef_dns(int, char **);
-void ef_ethernet(int, char **);
+void ef_eth(int, char **);
 void ef_icmp(int, char **);
 void ef_igmp(int, char **);
 void ef_ip(int, char **);
