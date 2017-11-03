@@ -16,7 +16,7 @@ static int cnt = 1;
 static int frame_size = 0;
 #define MAX_FRAME 4096
 static u_int8_t payload[MAX_FRAME];
-static int payload_size;
+static int payload_size = 0;
 
 static void raw_cmdline(int, char **);
 static void raw_usage(char *);
@@ -35,11 +35,9 @@ static int build_raw(ETHERhdr *eth, char *device) {
         n = libnet_write_link_layer(l2, device, payload, payload_size);
     }
 
-#ifdef DEBUG
-    printf("DEBUG: payload_size is %u.\n", payload_size);
-#endif
-    if (verbose == 2) ef_hexdump(payload, payload_size, HEX_ASCII_DECODE);
-    if (verbose == 3) ef_hexdump(payload, payload_size, HEX_RAW_DECODE);
+    if (verbose >= 2) printf("payload_size is %u.\n", payload_size);
+    if (verbose >= 2) ef_hexdump(payload, payload_size, HEX_ASCII_DECODE);
+    if (verbose >= 3) ef_hexdump(payload, payload_size, HEX_RAW_DECODE);
 
     if (verbose) {
         printf("Wrote %d byte Ethernet type %hu packet through linktype %s.\n",
@@ -89,6 +87,11 @@ static void raw_validatedata(void) {
         frame_size = 64;
     }
 
+    if (!payload_size) {
+        payload_size = frame_size - LIBNET_ETH_H;
+    }
+
+
     if (cnt < 0 || cnt > 2000000000) {
         fprintf(stderr, "ERROR: invalid count\n");
         exit(1);
@@ -112,12 +115,13 @@ static void raw_usage(char *arg) {
 }
 
 static void raw_cmdline(int argc, char **argv) {
-    int opt;
+    int opt, i;
     char *raw_options;
     extern char *optarg;
     extern int optind;
+    u_int32_t addr_tmp[6];
 
-    raw_options = "d:P:S:c:v?";
+    raw_options = "d:P:S:c:H:M:v?";
 
     while ((opt = getopt(argc, argv, raw_options)) != -1) {
         switch (opt) {
@@ -144,6 +148,25 @@ static void raw_cmdline(int argc, char **argv) {
                 fprintf(stderr, "ERROR: invalid hex string\n");
                 exit(1);
             }
+            break;
+
+        case 'H':  // Source MAC address
+            memset(addr_tmp, 0, sizeof(addr_tmp));
+            sscanf(optarg, "%02X:%02X:%02X:%02X:%02X:%02X", &addr_tmp[0],
+                   &addr_tmp[1], &addr_tmp[2], &addr_tmp[3], &addr_tmp[4],
+                   &addr_tmp[5]);
+            for (i = 0; i < 6; i++)
+                etherhdr.ether_shost[i] = (u_int8_t)addr_tmp[i];
+            break;
+
+        case 'M':  // Dest MAC address
+            memset(addr_tmp, 0, sizeof(addr_tmp));
+            sscanf(optarg, "%02X:%02X:%02X:%02X:%02X:%02X", &addr_tmp[0],
+                   &addr_tmp[1], &addr_tmp[2], &addr_tmp[3], &addr_tmp[4],
+                   &addr_tmp[5]);
+            for (i = 0; i < 6; i++)
+                etherhdr.ether_dhost[i] = (u_int8_t)addr_tmp[i];
+            break;
             break;
 
         case 'C':  // CNT

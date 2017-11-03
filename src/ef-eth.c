@@ -26,7 +26,7 @@ static void ethernet_validatedata(void);
 static void ethernet_verbose(void);
 
 static int build_ether(ETHERhdr *eth, char *device) {
-    int n;
+    int n = 0, cnt_err = 0, cnt_ok = 0, cnt_err_in_a_row = 0;
     static u_int8_t *pkt;
     char *ethertype;
     struct libnet_link_int *l2 = NULL;
@@ -45,18 +45,26 @@ static int build_ether(ETHERhdr *eth, char *device) {
     libnet_build_ethernet(eth->ether_dhost, eth->ether_shost, eth->ether_type,
                           payload, frame_size - LIBNET_ETH_H, pkt);
 
-    if (cnt > 1) {
-        printf("CNT: %d\n", cnt);
+    while (cnt_ok < cnt && cnt_err_in_a_row < 10000) {
+        int x = libnet_write_link_layer(l2, device, pkt, frame_size);
+        if (x < 0) {
+            cnt_err++;
+            cnt_err_in_a_row++;
+        } else {
+            cnt_err_in_a_row = 0;
+            cnt_ok++;
+            n += x;
+        }
     }
 
-    for (int i = 0; i < cnt; ++i) {
-        n = libnet_write_link_layer(l2, device, pkt, frame_size);
+    if (cnt_err) {
+        printf("CNT: %d, OK: %d, ERR: %d\n", cnt, cnt_ok, cnt_err);
     }
-#ifdef DEBUG
-    printf("DEBUG: frame_size is %u.\n", frame_size);
-#endif
-    if (verbose == 2) ef_hexdump(pkt, frame_size, HEX_ASCII_DECODE);
-    if (verbose == 3) ef_hexdump(pkt, frame_size, HEX_RAW_DECODE);
+
+
+    if (verbose >= 2) printf("frame_size is %u.\n", frame_size);
+    if (verbose >= 2) ef_hexdump(pkt, frame_size, HEX_ASCII_DECODE);
+    if (verbose >= 3) ef_hexdump(pkt, frame_size, HEX_RAW_DECODE);
 
     switch (eth->ether_type) {
     case ETHERTYPE_IP:
@@ -91,7 +99,9 @@ static int build_ether(ETHERhdr *eth, char *device) {
     }
     libnet_destroy_packet(&pkt);
     if (l2 != NULL) libnet_close_link_interface(l2);
-    return (n);
+
+    if (cnt == cnt_ok) return 0;
+    return -1;
 }
 
 void ef_eth(int argc, char **argv) {
@@ -106,7 +116,7 @@ void ef_eth(int argc, char **argv) {
         puts("\nEthernet Injection Failure");
         ethernet_exit(1);
     } else {
-        puts("\nEthernet Packet Injected");
+        if (verbose >= 1) puts("\nEthernet Packet Injected");
         ethernet_exit(0);
     }
 }
@@ -226,7 +236,7 @@ static void ethernet_cmdline(int argc, char **argv) {
             }
             break;
 
-        case 'C': // CNT
+        case 'c': // CNT
             cnt = atoi(optarg);
             if (cnt < 0 || cnt > 2000000000) {
                 fprintf(stderr, "ERROR: invalid count\n");
