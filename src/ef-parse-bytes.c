@@ -184,7 +184,7 @@ buf_t *parse_bytes(const char *s, int bytes) {
         int element_cnt = 0;
         int move_from, move_to, move_size;
 
-        //printf("line: %d\n", __LINE__);
+        //printf("line: %d data_begin: %s\n", __LINE__, data_begin);
 
         for (const char *x = data_begin; *x; ++x) {
             int colon = 0;
@@ -194,10 +194,10 @@ buf_t *parse_bytes(const char *s, int bytes) {
                 val = *x - '0';
 
             } else if (*x >= 'a' && *x <= 'f') {
-                val = *x - 'a';
+                val = *x - 'a' + 0xa;
 
             } else if (*x >= 'A' && *x <= 'F') {
-                val = *x - 'A';
+                val = *x - 'A' + 0xa;
 
             } else if (*x == ':') {
                 colon = 1;

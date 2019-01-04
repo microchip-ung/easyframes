@@ -104,6 +104,14 @@ TEST_CASE("parse_bytes", "[parse_bytes]" ) {
     CHECK(!parse_bytes("10:20:30:40:50::1", 6));
     CHECK(!parse_bytes("10:20:30:40:50::1:2", 6));
 
+    CHECK(hexstr(parse_bytes("a::4", 6)) == "0a0000000004");
+    CHECK(hexstr(parse_bytes("0a::4", 6)) == "0a0000000004");
+    CHECK(hexstr(parse_bytes("a0::4", 6)) == "a00000000004");
+
+    CHECK(hexstr(parse_bytes("B::5", 6)) == "0b0000000005");
+    CHECK(hexstr(parse_bytes("0B::5", 6)) == "0b0000000005");
+    CHECK(hexstr(parse_bytes("B0::5", 6)) == "b00000000005");
+
         // ::      -> 00:00:00:00:00:00
         // ::1     -> 00:00:00:00:00:01
         // 1::     -> 01:00:00:00:00:00
