@@ -26,6 +26,19 @@ buf_t *balloc(size_t size) {
     return b;
 }
 
+buf_t *bclone(const buf_t *b) {
+    if (!b)
+        return 0;
+
+    buf_t *bb = balloc(b->size);
+    if (!bb)
+        return 0;
+
+    memcpy(bb->data, b->data, b->size);
+
+    return bb;
+}
+
 void ble_free(buf_list_element_t *b) {
     if (!b)
         return;

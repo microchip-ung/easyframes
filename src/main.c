@@ -2,11 +2,6 @@
 
 #include <pcap/pcap.h>
 
-extern hdr_t HDR_ETH;
-extern hdr_t HDR_VLAN;
-extern hdr_t HDR_ARP;
-extern hdr_t HDR_IPV4;
-
 
 int argc_frame(int argc, const char *argv[], frame_t *f) {
     int i, res;
@@ -19,14 +14,23 @@ int argc_frame(int argc, const char *argv[], frame_t *f) {
         if (strcmp(argv[i], "eth") == 0) {
             h = &HDR_ETH;
 
-        } else if (strcmp(argv[i], "vlan") == 0) {
-            h = &HDR_VLAN;
+        } else if (strcmp(argv[i], "stag") == 0) {
+            h = &HDR_STAG;
+
+        } else if (strcmp(argv[i], "ctag") == 0) {
+            h = &HDR_CTAG;
 
         } else if (strcmp(argv[i], "arp") == 0) {
             h = &HDR_ARP;
 
         } else if (strcmp(argv[i], "ipv4") == 0) {
             h = &HDR_IPV4;
+
+        } else if (strcmp(argv[i], "udp") == 0) {
+            h = &HDR_UDP;
+
+        } else if (strcmp(argv[i], "payload") == 0) {
+            h = &HDR_PAYLOAD;
 
         } else {
             return i;
@@ -54,7 +58,6 @@ int argc_frame(int argc, const char *argv[], frame_t *f) {
 
 int main(int argc, const char *argv[]) {
     struct pcap_pkthdr pkt;
-    init_frame_data_all();
     buf_t *buf;
 
     pcap_t *pcap;
@@ -86,7 +89,6 @@ int main(int argc, const char *argv[]) {
     pcap_close(pcap);
 
     frame_reset(&frame);
-    uninit_frame_data_all();
 
     return 0;
 }

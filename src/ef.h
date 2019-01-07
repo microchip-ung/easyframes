@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <string.h>
+#include <stdlib.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -16,6 +17,7 @@ typedef struct {
 
 void bfree(buf_t *b);
 buf_t *balloc(size_t size);
+buf_t *bclone(const buf_t *b);
 
 typedef struct buf_list_element {
     struct buf_list_element *next;
@@ -52,13 +54,41 @@ size_t bwrite_all(int fd, const buf_list_t *buf);
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void destruct_free(void *buf, void *cb);
+
+#define GEN_ALLOC_CLONE_FREE(name)                                             \
+static inline void name ## _free(name ## _t *f) {                              \
+    destruct_free(f, (void *)&name ## _destruct);                              \
+}                                                                              \
+static inline name ## _t *name ## _alloc() {                                   \
+    return (name ## _t *)calloc(1, sizeof(name ## _t));                        \
+}                                                                              \
+static inline name ## _t *name ## _clone(const name ## _t *src) {              \
+    name ## _t *dst = name ## _alloc();                                        \
+    if (!dst)                                                                  \
+        return 0;                                                              \
+    if (name ## _copy(dst, src) == 0) {                                        \
+        return dst;                                                            \
+    } else {                                                                   \
+        free(dst);                                                             \
+        return 0;                                                              \
+    }                                                                          \
+}
+
+struct frame;
+typedef int (*frame_fill_defaults_t)(struct frame *, int stack_idx);
+
 typedef struct {
-    const char    *name;
-    int            bit_width;
-    int            bit_offset;
-    buf_t         *def;
-    buf_t         *val;
+    const char *name;
+    int         bit_width;
+    int         bit_offset;
+    buf_t      *def;
+    buf_t      *val;
 } field_t;
+
+int field_copy(field_t *dst, const field_t *src);
+void field_destruct(field_t *f);
+GEN_ALLOC_CLONE_FREE(field);
 
 typedef struct {
     const char *name;
@@ -67,13 +97,27 @@ typedef struct {
 
     field_t    *fields;
     int         fields_size;
+
+    int         offset_in_frame;
+
+    frame_fill_defaults_t frame_fill_defaults;
 } hdr_t;
 
-typedef struct {
+int hdr_copy(hdr_t *dst, const hdr_t *src);
+void hdr_destruct(hdr_t*f);
+GEN_ALLOC_CLONE_FREE(hdr);
+
+typedef struct frame {
 #define FRAME_STACK_MAX 100
     hdr_t *stack[FRAME_STACK_MAX];
     int    stack_size;
+    int    buf_size;
 } frame_t;
+
+int frame_copy(frame_t *dst, const frame_t *src);
+void frame_destruct(frame_t *f);
+GEN_ALLOC_CLONE_FREE(frame);
+
 
 buf_t *parse_bytes(const char *s, int bytes);
 
@@ -91,6 +135,20 @@ buf_t *frame_to_buf(frame_t *f);
 
 void init_frame_data_all();
 void uninit_frame_data_all();
+
+uint16_t inet_chksum(uint32_t sum, const uint16_t *buf, int length);
+void uninit_frame_data(hdr_t *h);
+void def_val(hdr_t *h, const char *field, const char *def);
+void def_offset(hdr_t *h);
+int ether_type_fill_defaults(struct frame *f, int stack_idx);
+
+extern hdr_t HDR_ETH;
+extern hdr_t HDR_CTAG;
+extern hdr_t HDR_STAG;
+extern hdr_t HDR_ARP;
+extern hdr_t HDR_IPV4;
+extern hdr_t HDR_UDP;
+extern hdr_t HDR_PAYLOAD;
 
 #ifdef __cplusplus
 }
