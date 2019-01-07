@@ -34,15 +34,18 @@ hdr_t HDR_CTAG = {
     .frame_fill_defaults = vlan_fill_defaults,
 };
 
-void vlan_init() __attribute__ ((constructor));
-void vlan_uninit() __attribute__ ((destructor));
-
 void vlan_init() {
     def_offset(&HDR_STAG);
     def_offset(&HDR_CTAG);
+
+    hdr_tmpls[HDR_TMPL_STAG] = &HDR_STAG;
+    hdr_tmpls[HDR_TMPL_CTAG] = &HDR_CTAG;
 }
 
 void vlan_uninit() {
     uninit_frame_data(&HDR_STAG);
     uninit_frame_data(&HDR_CTAG);
+
+    hdr_tmpls[HDR_TMPL_STAG] = 0;
+    hdr_tmpls[HDR_TMPL_CTAG] = 0;
 }

@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <arpa/inet.h>
 
-typedef void (*destruct_cb_t)(void *buf);
+hdr_t *hdr_tmpls[HDR_TMPL_SIZE];
 
 void hexdump(void *_d, int s) {
     int i;
@@ -18,6 +18,8 @@ void hexdump(void *_d, int s) {
         printf("\n");
     }
 }
+
+typedef void (*destruct_cb_t)(void *buf);
 
 void destruct_free(void *buf, void *cb_) {
     destruct_cb_t cb = (destruct_cb_t)cb_;
@@ -387,5 +389,39 @@ buf_t *frame_to_buf(frame_t *f) {
     }
 
     return buf;
+}
+
+void eth_init();
+void vlan_init();
+void arp_init();
+void ipv4_init();
+void udp_init();
+void payload_init();
+
+void init() __attribute__ ((constructor));
+void init() {
+    eth_init();
+    vlan_init();
+    arp_init();
+    ipv4_init();
+    udp_init();
+    payload_init();
+}
+
+void eth_uninit();
+void vlan_uninit();
+void arp_uninit();
+void ipv4_uninit();
+void udp_uninit();
+void payload_uninit();
+
+void uninit() __attribute__ ((destructor));
+void uninit() {
+    eth_uninit();
+    vlan_uninit();
+    arp_uninit();
+    ipv4_uninit();
+    udp_uninit();
+    payload_uninit();
 }
 

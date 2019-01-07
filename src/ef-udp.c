@@ -96,15 +96,16 @@ hdr_t HDR_UDP = {
     .frame_fill_defaults = udp_fill_defaults,
 };
 
-void udp_init() __attribute__ ((constructor));
-void udp_uninit() __attribute__ ((destructor));
-
 void udp_init() {
     def_offset(&HDR_UDP);
     def_offset(&HDR_UDP_IPV4_CHKSUM);
+
+    hdr_tmpls[HDR_TMPL_UDP] = &HDR_UDP;
 }
 
 void udp_uninit() {
     uninit_frame_data(&HDR_UDP);
     uninit_frame_data(&HDR_UDP_IPV4_CHKSUM);
+
+    hdr_tmpls[HDR_TMPL_UDP] = 0;
 }

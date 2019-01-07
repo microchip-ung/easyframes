@@ -4,38 +4,23 @@
 
 
 int argc_frame(int argc, const char *argv[], frame_t *f) {
-    int i, res;
+    int i, j, res;
     hdr_t *h;
 
     frame_reset(f);
 
     i = 0;
     while (i < argc) {
-        if (strcmp(argv[i], "eth") == 0) {
-            h = &HDR_ETH;
-
-        } else if (strcmp(argv[i], "stag") == 0) {
-            h = &HDR_STAG;
-
-        } else if (strcmp(argv[i], "ctag") == 0) {
-            h = &HDR_CTAG;
-
-        } else if (strcmp(argv[i], "arp") == 0) {
-            h = &HDR_ARP;
-
-        } else if (strcmp(argv[i], "ipv4") == 0) {
-            h = &HDR_IPV4;
-
-        } else if (strcmp(argv[i], "udp") == 0) {
-            h = &HDR_UDP;
-
-        } else if (strcmp(argv[i], "payload") == 0) {
-            h = &HDR_PAYLOAD;
-
-        } else {
-            return i;
-
+        h = 0;
+        for (j = 0; j < HDR_TMPL_SIZE; ++j) {
+            if (hdr_tmpls[j] && strcmp(argv[i], hdr_tmpls[j]->name) == 0) {
+                h = hdr_tmpls[j];
+                break;
+            }
         }
+
+        if (!h)
+            return i;
 
         h = frame_clone_and_push_hdr(f, h);
         printf("Parsing hdr: %s: %p\n", h->name, h);

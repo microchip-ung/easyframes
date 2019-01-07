@@ -142,13 +142,20 @@ void def_val(hdr_t *h, const char *field, const char *def);
 void def_offset(hdr_t *h);
 int ether_type_fill_defaults(struct frame *f, int stack_idx);
 
-extern hdr_t HDR_ETH;
-extern hdr_t HDR_CTAG;
-extern hdr_t HDR_STAG;
-extern hdr_t HDR_ARP;
-extern hdr_t HDR_IPV4;
-extern hdr_t HDR_UDP;
-extern hdr_t HDR_PAYLOAD;
+
+typedef enum {
+    HDR_TMPL_ETH,
+    HDR_TMPL_CTAG,
+    HDR_TMPL_STAG,
+    HDR_TMPL_ARP,
+    HDR_TMPL_IPV4,
+    HDR_TMPL_UDP,
+    HDR_TMPL_PAYLOAD,
+
+    HDR_TMPL_SIZE,
+} hdr_tmpl_t;
+
+extern hdr_t *hdr_tmpls[HDR_TMPL_SIZE];
 
 #ifdef __cplusplus
 }

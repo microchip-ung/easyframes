@@ -74,16 +74,17 @@ hdr_t HDR_IPV4 = {
     .frame_fill_defaults = ipv4_fill_defaults,
 };
 
-void ipv4_init() __attribute__ ((constructor));
-void ipv4_uninit() __attribute__ ((destructor));
-
 void ipv4_init() {
     def_offset(&HDR_IPV4);
     def_val(&HDR_IPV4, "ver", "4");
     def_val(&HDR_IPV4, "ihl", "5");
     def_val(&HDR_IPV4, "ttl", "31");
+
+    hdr_tmpls[HDR_TMPL_IPV4] = &HDR_IPV4;
 }
 
 void ipv4_uninit() {
     uninit_frame_data(&HDR_IPV4);
+
+    hdr_tmpls[HDR_TMPL_IPV4] = 0;
 }

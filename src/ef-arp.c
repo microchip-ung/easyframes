@@ -19,9 +19,6 @@ hdr_t HDR_ARP = {
     .fields_size = sizeof(ARP_FIELDS) / sizeof(ARP_FIELDS[0]),
 };
 
-void arp_init() __attribute__ ((constructor));
-void arp_uninit() __attribute__ ((destructor));
-
 void arp_init() {
     def_offset(&HDR_ARP);
     def_val(&HDR_ARP, "htype", "0x0001");
@@ -29,8 +26,11 @@ void arp_init() {
     def_val(&HDR_ARP, "hlen",  "6");
     def_val(&HDR_ARP, "plen",  "4");
 
+    hdr_tmpls[HDR_TMPL_ARP] = &HDR_ARP;
 }
 
 void arp_uninit() {
     uninit_frame_data(&HDR_ARP);
+
+    hdr_tmpls[HDR_TMPL_ARP] = 0;
 }
