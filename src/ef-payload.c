@@ -1,11 +1,14 @@
 #include "ef.h"
 
 field_t PAYLOAD_FIELDS[] = {
-    { .name = "hex", .bit_width = 64 },
+    { .name = "hex",
+      .help = "64 bit data",
+      .bit_width = 64 },
 };
 
 hdr_t HDR_PAYLOAD = {
     .name = "payload",
+    .help = "Generic payload data",
     .fields = PAYLOAD_FIELDS,
     .fields_size = sizeof(PAYLOAD_FIELDS) / sizeof(PAYLOAD_FIELDS[0]),
 };

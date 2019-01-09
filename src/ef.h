@@ -80,6 +80,7 @@ typedef int (*frame_fill_defaults_t)(struct frame *, int stack_idx);
 
 typedef struct {
     const char *name;
+    const char *help;
     int         bit_width;
     int         bit_offset;
     buf_t      *def;
@@ -92,6 +93,7 @@ GEN_ALLOC_CLONE_FREE(field);
 
 typedef struct {
     const char *name;
+    const char *help;
     uint32_t    type;
     uint32_t    size;
 
@@ -142,6 +144,8 @@ void def_val(hdr_t *h, const char *field, const char *def);
 void def_offset(hdr_t *h);
 int ether_type_fill_defaults(struct frame *f, int stack_idx);
 
+void field_help(field_t *f, int indent);
+void hdr_help(hdr_t **hdr, int size, int indent, int show_fields);
 
 typedef enum {
     HDR_TMPL_ETH,

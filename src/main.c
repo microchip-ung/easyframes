@@ -11,6 +11,13 @@ int argc_frame(int argc, const char *argv[], frame_t *f) {
 
     i = 0;
     while (i < argc) {
+
+        if (strcmp(argv[i], "help") == 0) {
+            printf("Specify a frame by using one or more of the following headers:\n");
+            hdr_help(hdr_tmpls, HDR_TMPL_SIZE, 2, 0);
+            return -1;
+        }
+
         h = 0;
         for (j = 0; j < HDR_TMPL_SIZE; ++j) {
             if (hdr_tmpls[j] && strcmp(argv[i], hdr_tmpls[j]->name) == 0) {
@@ -19,16 +26,24 @@ int argc_frame(int argc, const char *argv[], frame_t *f) {
             }
         }
 
-        if (!h)
-            return i;
-
-        h = frame_clone_and_push_hdr(f, h);
-        printf("Parsing hdr: %s: %p\n", h->name, h);
+        if (!h) {
+            printf("ERROR: Invalid parameter: %s\n", argv[i]);
+            return -1;
+        }
 
         i += 1;
-        if (i >= argc)
-            return i;
+        if (i >= argc) {
+            printf("ERROR: Missing argument to %s\n", argv[i - 1]);
+            return -1;
+        }
 
+        h = frame_clone_and_push_hdr(f, h);
+        if (!h) {
+            printf("ERROR: frame_clone_and_push_hdr() failed\n");
+            return -1;
+        }
+
+        printf("Parsing hdr: %s: %p\n", h->name, h);
         res = hdr_parse_fields(h, argc - i, argv + i);
         if (res <= 0) {
             printf("err\n");
@@ -44,6 +59,7 @@ int argc_frame(int argc, const char *argv[], frame_t *f) {
 int main(int argc, const char *argv[]) {
     struct pcap_pkthdr pkt;
     buf_t *buf;
+    int res;
 
     pcap_t *pcap;
     pcap_dumper_t *pcapfile;
@@ -62,7 +78,10 @@ int main(int argc, const char *argv[]) {
 
     frame_t frame = {};
 
-    argc_frame(argc - 1, argv + 1, &frame);
+    res = argc_frame(argc - 1, argv + 1, &frame);
+    if (res < 0) {
+        return -1;
+    }
     buf = frame_to_buf(&frame);
 
     memset(&pkt, 0, sizeof(pkt));

@@ -315,6 +315,11 @@ int hdr_parse_fields(hdr_t *hdr, int argc, const char *argv[]) {
     field_t *f;
 
     for (i = 0; i < argc; ++i) {
+        if (strcmp(argv[i], "help") == 0) {
+            hdr_help(&hdr, 1, 0, 1);
+            return -1;
+        }
+
         f = find_field(hdr, argv[i]);
 
         if (!f)
@@ -323,8 +328,15 @@ int hdr_parse_fields(hdr_t *hdr, int argc, const char *argv[]) {
         i += 1;
 
         // Check to see if we have a value argument
-        if (i >= argc)
+        if (i >= argc) {
+            printf("ERROR: Missing argument to %s\n", argv[i - 1]);
             return -1;
+        }
+
+        if (strcmp(argv[i], "help") == 0) {
+            field_help(f, 0);
+            return -1;
+        }
 
         printf("Assigned value for %s\n", f->name);
         f->val = parse_bytes(argv[i], BIT_TO_BYTE(f->bit_width));
@@ -389,6 +401,48 @@ buf_t *frame_to_buf(frame_t *f) {
     }
 
     return buf;
+}
+
+void field_help(field_t *f, int indent)
+{
+    int i;
+
+    for (i = 0; i < indent; ++i) {
+        printf(" ");
+    }
+    printf("%s", f->name);
+    if (f->help)
+        printf(": %s", f->help);
+    else
+        printf(": %s", "MISSING FIELD HELP TEXT!");
+    printf("\n");
+}
+
+void hdr_help(hdr_t **hdr, int size, int indent, int show_fields)
+{
+    int i, j;
+    hdr_t *h;
+
+    for (i = 0; i < size; ++i) {
+        h = hdr[i];
+        if (h && h->name) {
+            for (j = 0; j < indent; ++j) {
+                printf(" ");
+            }
+            printf("%s", h->name);
+            if (h->help)
+                printf(": %s", h->help);
+            else
+                printf(": %s", "MISSING HDR HELP TEXT!");
+            printf("\n");
+            if (show_fields) {
+                printf("Specify the %s header by using one or more of the following fields:\n", h->name);
+                for (j = 0; j < h->fields_size; ++j) {
+                    field_help(&h->fields[j], indent + 2);
+                }
+            }
+        }
+    }
 }
 
 void eth_init();

@@ -82,14 +82,23 @@ int udp_fill_defaults(struct frame *f, int stack_idx) {
 }
 
 field_t UDP_FIELDS[] = {
-    { .name = "sport",  .bit_width =  16 },
-    { .name = "dport",  .bit_width =  16 },
-    { .name = "len",    .bit_width =  16 },
-    { .name = "chksum", .bit_width =  16 },
+    { .name = "sport",
+      .help = "Source Port Number, e.g. 22 for SSH",
+      .bit_width =  16 },
+    { .name = "dport",
+      .help = "Destination Port Number, e.g. 22 for SSH",
+      .bit_width =  16 },
+    { .name = "len",
+      .help = "Length of UDP header and data",
+      .bit_width =  16 },
+    { .name = "chksum",
+      .help = "Checksum",
+      .bit_width =  16 },
 };
 
 hdr_t HDR_UDP = {
     .name = "udp",
+    .help = "User Datagram Protocol",
     .type = 17,
     .fields = UDP_FIELDS,
     .fields_size = sizeof(UDP_FIELDS) / sizeof(UDP_FIELDS[0]),

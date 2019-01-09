@@ -5,14 +5,23 @@ static int vlan_fill_defaults(struct frame *f, int stack_idx) {
 }
 
 field_t STAG_FIELDS[] = {
-    { .name = "pcp",  .bit_width =   3 },
-    { .name = "dei",  .bit_width =   1 },
-    { .name = "vid",  .bit_width =  12 },
-    { .name = "et",   .bit_width =  16 },
+    { .name = "pcp",
+      .help = "Priority Code Point",
+      .bit_width =   3 },
+    { .name = "dei",
+      .help = "Drop Elegible Indicator",
+      .bit_width =   1 },
+    { .name = "vid",
+      .help = "VLAN Identifier",
+      .bit_width =  12 },
+    { .name = "et",
+      .help = "Tag Protocol Identifier",
+      .bit_width =  16 },
 };
 
 hdr_t HDR_STAG = {
     .name = "stag",
+    .help = "Service VLAN Tag",
     .type = 0x88A8,
     .fields = STAG_FIELDS,
     .fields_size = sizeof(STAG_FIELDS) / sizeof(STAG_FIELDS[0]),
@@ -20,14 +29,23 @@ hdr_t HDR_STAG = {
 };
 
 field_t CTAG_FIELDS[] = {
-    { .name = "pcp",  .bit_width =   3 },
-    { .name = "dei",  .bit_width =   1 },
-    { .name = "vid",  .bit_width =  12 },
-    { .name = "et",   .bit_width =  16 },
+    { .name = "pcp",
+      .help = "Priority Code Point",
+      .bit_width =   3 },
+    { .name = "dei",
+      .help = "Drop Elegible Indicator",
+      .bit_width =   1 },
+    { .name = "vid",
+      .help = "VLAN Identifier",
+      .bit_width =  12 },
+    { .name = "et",
+      .help = "Tag Protocol Identifier",
+      .bit_width =  16 },
 };
 
 hdr_t HDR_CTAG = {
     .name = "ctag",
+    .help = "Customer VLAN Tag",
     .type = 0x8100,
     .fields = CTAG_FIELDS,
     .fields_size = sizeof(CTAG_FIELDS) / sizeof(CTAG_FIELDS[0]),
