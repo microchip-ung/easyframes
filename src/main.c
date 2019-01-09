@@ -43,8 +43,7 @@ int argc_frame(int argc, const char *argv[], frame_t *f) {
         //printf("%d, i=%d/%d %s\n", __LINE__, i, argc, argv[i]);
         res = hdr_parse_fields(h, argc - i, argv + i);
         if (res < 0) {
-            printf("%s:%d Error parsing fields\n", __FILE__, __LINE__);
-            return -1;
+            return res;
         }
 
         i += res;
@@ -70,6 +69,51 @@ void cmd_destruct(cmd_t *c) {
     memset(c, 0, sizeof(*c));
 }
 
+void print_help() {
+    printf("Usage: ef [options] <command> args [<command> args]...\n");
+    printf("\n");
+    printf("The ef (easy frame) tool allow to easily transmit frames, and\n");
+    printf("optionally specify what frames it expect to receive.\n");
+    printf("\n");
+    printf("Options:\n");
+    printf("\n");
+    printf("Valid commands:\n");
+    printf("  tx: Transmit a frame on a interface. Syntax:\n");
+    printf("  tx <interface> FRAME | help\n");
+    printf("\n");
+    printf("  rx: Specify a frame which is expected to be received. If no \n");
+    printf("      frame is specified, then the expectation is that no\n");
+    printf("      frames are received on the interface. Syntax:\n");
+    printf("  rx <interface> [FRAME] | help\n");
+    printf("\n");
+    printf("  hex: Print a frame on stdout as a hex string. Syntax:\n");
+    printf("  hex FRAME\n");
+    printf("\n");
+    printf("  name: Specify a frame, and provide a name (alias) for it.\n");
+    printf("        This alias can be used other places instead of the\n");
+    printf("        complete frame specification. Syntax:\n");
+    printf("  name <name> FRAME-SPEC | help\n");
+    printf("\n");
+    printf("  pcap: Write a frame to a pcap file (appending if the file\n");
+    printf("  exists already). Syntax:\n");
+    printf("  pcap <file> FRAME | help\n");
+    printf("\n");
+    printf("Where FRAME is either a frame specification of a named frame.\n");
+    printf("Syntax: FRAME ::= FRAME-SPEC | name <name>\n");
+    printf("\n");
+    printf("FRAME-SPEC is a textual specification of a frame.\n");
+    printf("Syntax: FRAME-SPEC ::= [HDR-NAME [<HDR-FIELD> <HDR-FIELD-VAL>]...]...\n");
+    printf("        HDR-NAME ::= eth|stag|ctag|arp|ip|udp\n");
+    printf("\n");
+    printf("Examples:\n");
+    printf("  ef tx eth0 eth dmac ::1 smac ::2 stag vid 0x100 ip da 1 udp\n");
+    printf("\n");
+    printf("  ef name f1 eth dmac ff:ff:ff:ff:ff:ff smac ::1\\\n");
+    printf("     rx eth0 name f1\\\n");
+    printf("     tx eth1 name f1\n");
+    printf("\n");
+}
+
 int argc_cmd(int argc, const char *argv[], cmd_t *c) {
     int i = 0, res;
 
@@ -82,12 +126,15 @@ int argc_cmd(int argc, const char *argv[], cmd_t *c) {
         c->type = CMD_TYPE_NAME;
     } else if (strcmp(argv[i], "pcap") == 0) {
         c->type = CMD_TYPE_PCAP;
-    } else if (strcmp(argv[i], "hexstr") == 0) {
+    } else if (strcmp(argv[i], "hex") == 0) {
         c->type = CMD_TYPE_HEX;
     } else if (strcmp(argv[i], "rx") == 0) {
         c->type = CMD_TYPE_RX;
     } else if (strcmp(argv[i], "tx") == 0) {
         c->type = CMD_TYPE_TX;
+    } else if (strcmp(argv[i], "help") == 0) {
+        print_help();
+        return -1;
     } else {
         return 0;
     }
@@ -142,7 +189,7 @@ int argc_cmd(int argc, const char *argv[], cmd_t *c) {
     if (res <= 0) {
         cmd_destruct(c);
         //printf("%d, i=%d/%d %s\n", __LINE__, i, argc, argv[i]);
-        return 0;
+        return res;
     }
 
     if (c->frame) {
@@ -160,14 +207,18 @@ int argc_cmds(int argc, const char *argv[]) {
     cmd_t cmds[100] = {};
 
     while (i < argc && cmd_idx < 100) {
-        //printf("%d i: %d\n", __LINE__, i);
         res = argc_cmd(argc - i, argv + i, &cmds[cmd_idx]);
-        //printf("%d res: %d\n", __LINE__, res);
+
         if (res > 0) {
             i += res;
             cmd_idx ++;
-        } else {
+
+        } else if (res == 0) {
             break;
+
+        } else {
+            return -1;
+
         }
     }
 

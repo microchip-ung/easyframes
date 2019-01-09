@@ -419,11 +419,13 @@ void field_help(field_t *f, int indent)
     for (i = 0; i < indent; ++i) {
         printf(" ");
     }
-    printf("%s", f->name);
+
+    printf("%-16s", f->name);
     if (f->help)
-        printf(": %s", f->help);
+        printf(" %s", f->help);
     else
-        printf(": %s", "MISSING FIELD HELP TEXT!");
+        printf(" %s", "MISSING FIELD HELP TEXT!");
+
     printf("\n");
 }
 
@@ -434,21 +436,28 @@ void hdr_help(hdr_t **hdr, int size, int indent, int show_fields)
 
     for (i = 0; i < size; ++i) {
         h = hdr[i];
-        if (h && h->name) {
-            for (j = 0; j < indent; ++j) {
-                printf(" ");
-            }
-            printf("%s", h->name);
-            if (h->help)
-                printf(": %s", h->help);
-            else
-                printf(": %s", "MISSING HDR HELP TEXT!");
+
+        if (!h || !h->name)
+            continue;
+
+        for (j = 0; j < indent; ++j) {
+            printf(" ");
+        }
+        printf("%-16s", h->name);
+
+        if (h->help)
+            printf(" %s", h->help);
+        else
+            printf(" %s", "MISSING HDR HELP TEXT!");
+
+        printf("\n");
+
+        if (show_fields) {
             printf("\n");
-            if (show_fields) {
-                printf("Specify the %s header by using one or more of the following fields:\n", h->name);
-                for (j = 0; j < h->fields_size; ++j) {
-                    field_help(&h->fields[j], indent + 2);
-                }
+            printf("Specify the %s header by using one or more of the following fields:\n",
+                   h->name);
+            for (j = 0; j < h->fields_size; ++j) {
+                field_help(&h->fields[j], indent + 2);
             }
         }
     }
