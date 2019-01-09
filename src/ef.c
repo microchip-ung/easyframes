@@ -19,6 +19,15 @@ void hexdump(void *_d, int s) {
     }
 }
 
+void print_hex_str(int fd, void *_d, int s) {
+    uint8_t *d = (uint8_t *)_d;
+    uint8_t *e = d + s;
+
+    for (; d != e; ++d) {
+        dprintf(fd, "%02hhx", *d);
+    }
+}
+
 typedef void (*destruct_cb_t)(void *buf);
 
 void destruct_free(void *buf, void *cb_) {
@@ -338,7 +347,7 @@ int hdr_parse_fields(hdr_t *hdr, int argc, const char *argv[]) {
             return -1;
         }
 
-        printf("Assigned value for %s\n", f->name);
+        //printf("Assigned value for %s\n", f->name);
         f->val = parse_bytes(argv[i], BIT_TO_BYTE(f->bit_width));
     }
 
@@ -352,15 +361,15 @@ int hdr_copy_to_buf(hdr_t *hdr, int offset, buf_t *buf) {
 
     for (i = 0, f = hdr->fields; i < hdr->fields_size; ++i, ++f) {
         if (BIT_TO_BYTE(f->bit_width) + offset > buf->size) {
-            printf("Buf over flow\n");
+            //printf("Buf over flow\n");
             return -1;
         }
 
         if (f->val) {
-            printf("val %s\n", f->name);
+            //printf("val %s\n", f->name);
             v = f->val;
         } else if (f->def) {
-            printf("def %s\n", f->name);
+            //printf("def %s\n", f->name);
             v = f->def;
         } else {
             v = 0;
@@ -378,7 +387,7 @@ buf_t *frame_to_buf(frame_t *f) {
     buf_t *buf;
     int frame_size = 0, offset = 0;
 
-    printf("Stack size: %d\n", f->stack_size);
+    //printf("Stack size: %d\n", f->stack_size);
     for (i = 0; i < f->stack_size; ++i) {
         f->stack[i]->offset_in_frame = frame_size;
         frame_size += f->stack[i]->size;

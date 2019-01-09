@@ -8,6 +8,7 @@ include_directories(src)
 add_library(libef STATIC
     src/ef.c
     src/ef-parse-bytes.c
+    src/ef-exec.c
     src/ef-buf.c
     src/ef-eth.c
     src/ef-vlan.c

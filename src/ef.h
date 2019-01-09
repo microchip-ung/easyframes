@@ -18,6 +18,7 @@ typedef struct {
 void bfree(buf_t *b);
 buf_t *balloc(size_t size);
 buf_t *bclone(const buf_t *b);
+int bequal(const buf_t *a, const buf_t *b);
 
 typedef struct buf_list_element {
     struct buf_list_element *next;
@@ -160,6 +161,38 @@ typedef enum {
 } hdr_tmpl_t;
 
 extern hdr_t *hdr_tmpls[HDR_TMPL_SIZE];
+
+typedef enum {
+    CMD_TYPE_INVALID,
+    CMD_TYPE_NAME,
+    CMD_TYPE_PCAP,
+    CMD_TYPE_HEX,
+    CMD_TYPE_RX,
+    CMD_TYPE_TX,
+} cmd_type_t;
+
+struct cmd;
+typedef struct cmd {
+    struct cmd *next;
+    cmd_type_t  type;
+    char       *name;
+    char       *arg0;
+    frame_t    *frame;
+    buf_t      *frame_buf;
+    int         done;
+} cmd_t;
+
+typedef struct {
+    int          fd;
+    int          has_rx;
+    int          has_tx;
+    cmd_t       *cmd;
+    int          rx_err_cnt;
+} cmd_socket_t;
+
+int exec_cmds(int cnt, cmd_t *cmds);
+
+void print_hex_str(int fd, void *_d, int s);
 
 #ifdef __cplusplus
 }

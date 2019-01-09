@@ -39,6 +39,19 @@ buf_t *bclone(const buf_t *b) {
     return bb;
 }
 
+int bequal(const buf_t *a, const buf_t *b) {
+    if ((a && !b) || (!a && b))
+        return 0;
+
+    if (!a && !b)
+        return 1;
+
+    if (a->size != b->size)
+        return 0;
+
+    return memcmp(a->data, b->data, a->size) == 0;
+}
+
 void ble_free(buf_list_element_t *b) {
     if (!b)
         return;
