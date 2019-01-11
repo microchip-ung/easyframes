@@ -344,9 +344,8 @@ int exec_cmds(int cnt, cmd_t *cmds) {
             return -1;
     }
 
-    // TODO, hard-coded
-    tv.tv_sec = 0;
-    tv.tv_usec = 100000;
+    tv.tv_sec = TIME_OUT_MS / 1000;
+    tv.tv_usec = (TIME_OUT_MS - (tv.tv_sec * 1000)) * 1000;
 
     while (1) {
         fd_max = rfds_wfds_fill(resources, res_valid, &rfds, &wfds);

@@ -1,6 +1,8 @@
 #include "ef.h"
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 int argc_frame(int argc, const char *argv[], frame_t *f) {
     int i, j, res;
@@ -69,6 +71,7 @@ void cmd_destruct(cmd_t *c) {
     memset(c, 0, sizeof(*c));
 }
 
+
 void print_help() {
     printf("Usage: ef [options] <command> args [<command> args]...\n");
     printf("\n");
@@ -76,6 +79,13 @@ void print_help() {
     printf("optionally specify what frames it expect to receive.\n");
     printf("\n");
     printf("Options:\n");
+    printf("  -h                    Top level help message.\n");
+    printf("  -t <timeout-in-ms>    When listening on an interface (rx),\n");
+    printf("                        the tool will always listen during the\n");
+    printf("                        entire timeout period. This is needed,\n");
+    printf("                        as we must also check that no frames\n");
+    printf("                        are received during the test.\n");
+    printf("                        Default is 100ms.\n");
     printf("\n");
     printf("Valid commands:\n");
     printf("  tx: Transmit a frame on a interface. Syntax:\n");
@@ -236,7 +246,27 @@ int argc_cmds(int argc, const char *argv[]) {
     return res;
 }
 
+int TIME_OUT_MS = 100;
+
 int main(int argc, const char *argv[]) {
-    return argc_cmds(argc - 1, argv + 1);
+    int opt;
+
+    while ((opt = getopt(argc, (char * const*)argv, "ht:")) != -1) {
+        switch (opt) {
+            case 'h':
+                print_help();
+                return -1;
+
+            case 't':
+                TIME_OUT_MS = atoi(optarg);
+                break;
+
+            default: /* '?' */
+                print_help();
+                return -1;
+        }
+    }
+
+    return argc_cmds(argc - optind, argv + optind);
 }
 
