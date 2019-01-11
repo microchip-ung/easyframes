@@ -15,6 +15,7 @@ hdr_t HDR_SP_OC1 = {
     .help = "Short prefix for injection and extraction of frames for Ocelot1",
     .fields = SP_OC1_FIELDS,
     .fields_size = sizeof(SP_OC1_FIELDS) / sizeof(SP_OC1_FIELDS[0]),
+    .parser = hdr_parse_fields,
 };
 
 field_t LP_OC1_FIELDS[] = {
@@ -37,6 +38,7 @@ hdr_t HDR_LP_OC1 = {
     .help = "Long prefix for injection and extraction of frames for Ocelot1",
     .fields = LP_OC1_FIELDS,
     .fields_size = sizeof(LP_OC1_FIELDS) / sizeof(LP_OC1_FIELDS[0]),
+    .parser = hdr_parse_fields,
 };
 
 field_t IFH_OC1_FIELDS[] = {
@@ -117,6 +119,7 @@ hdr_t HDR_IFH_OC1 = {
     .help = "Injection Frame Header for Ocelot1",
     .fields = IFH_OC1_FIELDS,
     .fields_size = sizeof(IFH_OC1_FIELDS) / sizeof(IFH_OC1_FIELDS[0]),
+    .parser = hdr_parse_fields,
 };
 
 field_t EFH_OC1_FIELDS[] = {
@@ -187,6 +190,7 @@ hdr_t HDR_EFH_OC1 = {
     .help = "Extraction Frame Header for Ocelot1",
     .fields = EFH_OC1_FIELDS,
     .fields_size = sizeof(EFH_OC1_FIELDS) / sizeof(EFH_OC1_FIELDS[0]),
+    .parser = hdr_parse_fields,
 };
 
 void ifh_init() {

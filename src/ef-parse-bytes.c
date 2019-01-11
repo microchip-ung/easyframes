@@ -308,3 +308,295 @@ buf_t *parse_bytes(const char *s, int bytes) {
     return 0;
 }
 
+buf_t *parse_var_bytes_hex(const char *s) {
+    buf_t *b;
+    uint8_t *p_o, tmp;
+    const char *p;
+    int cnt_nipple, has_others, has_align_issues, valid;
+
+    p = s;
+    cnt_nipple = 0;
+    has_others = 0;
+    has_align_issues = 0;
+
+    for (; *p; ++p) {
+        if (*p >= '0' && *p <= '9') {
+            cnt_nipple ++;
+        } else if (*p >= 'a' && *p <= 'f') {
+            cnt_nipple ++;
+        } else if (*p >= 'A' && *p <= 'F') {
+            cnt_nipple ++;
+        } else if (*p == '.' || *p == ':' || *p == '-' || *p == '_') {
+            if (cnt_nipple % 2 != 0) {
+                has_align_issues = 1;
+            }
+        } else {
+            has_others = 1;
+        }
+    }
+
+    if (cnt_nipple % 2 != 0) {
+        has_align_issues = 1;
+    }
+
+    if (has_others || cnt_nipple == 0) {
+        printf("ERROR: Could not parse >%s< as a hex string\n", s);
+        return 0;
+    }
+
+    if (has_align_issues) {
+        printf("ERROR: hex strings must be byte aligned, and if delimiters are then they must also be byte aligned.\n");
+        return 0;
+    }
+
+    b = balloc(cnt_nipple / 2);
+
+    p = s;
+    p_o = b->data;
+    cnt_nipple = 0;
+
+    for (; *p; ++p) {
+        if (*p >= '0' && *p <= '9') {
+            valid = 1;
+            tmp = *p - '0';
+
+        } else if (*p >= 'a' && *p <= 'f') {
+            valid = 1;
+            tmp = (*p - 'a') + 10;
+
+        } else if (*p >= 'A' && *p <= 'F') {
+            valid = 1;
+            tmp = (*p - 'A') + 10;
+
+        } else {
+            valid = 0;
+        }
+
+        if (valid) {
+            *p_o |= tmp;
+            cnt_nipple++;
+
+            if (cnt_nipple % 2 == 1)
+                *p_o <<= 4;
+            else
+                p_o++;
+        }
+    }
+
+    return b;
+}
+
+buf_t *parse_var_bytes_ascii(const char *s) {
+    buf_t *b;
+    b = balloc(strlen(s));
+    memcpy(b->data, s, b->size);
+
+    return b;
+}
+
+buf_t *parse_var_bytes_ascii0(const char *s) {
+    buf_t *b;
+    b = balloc(strlen(s) + 1);
+    memcpy(b->data, s, b->size);
+
+    return b;
+}
+
+int parse_uint8(const char *s, uint8_t *o) {
+    buf_t *b = parse_bytes(s, 1);
+
+    if (!b)
+        return -1;
+
+    *o = b->data[0];
+    bfree(b);
+
+    return 0;
+}
+
+int parse_uint32(const char *s, uint32_t *o) {
+    uint32_t *tmp;
+    buf_t *b = parse_bytes(s, 4);
+
+    if (!b)
+        return -1;
+
+    tmp = (uint32_t *)b->data;
+    *o = be32toh(*tmp);
+    bfree(b);
+
+    return 0;
+}
+
+buf_t *parse_var_bytes_repeat(const char *cnt_, const char *val_) {
+    buf_t *b;
+    uint8_t val;
+    uint32_t cnt;
+
+    if (parse_uint32(cnt_, &cnt) != 0) {
+        return 0;
+    }
+
+    if (parse_uint8(val_, &val) != 0) {
+        return 0;
+    }
+
+    b = balloc(cnt);
+    if (!b)
+        return 0;
+
+    memset(b->data, val, b->size);
+
+    return b;
+}
+
+buf_t *parse_var_bytes_pattern(const char *pat, const char *len_) {
+    int i;
+    buf_t *b;
+    uint8_t val;
+    uint32_t len;
+
+    if (parse_uint32(len_, &len) != 0) {
+        return 0;
+    }
+
+    b = balloc(len);
+    if (!b)
+        return 0;
+
+    if (strcmp(pat, "cnt") == 0) {
+        for (i = 0, val = 0; i < len; i++, val++)
+            b->data[i] = val;
+
+    } else if (strcmp(pat, "zero") == 0) {
+        memset(b->data, 0, b->size);
+
+    } else if (strcmp(pat, "ones") == 0) {
+        memset(b->data, 0xff, b->size);
+
+    } else {
+        bfree(b);
+        return 0;
+    }
+
+    return b;
+}
+
+// hex <hex-str>
+// repeat <cnt> <val>
+// pad cnt <cnt>
+int parse_var_bytes_(buf_t **b_out, int argc, const char *argv[]) {
+    buf_t *b;
+    int i = 0;
+
+    if (i >= argc)
+        return 0;
+
+    if (strcmp(argv[i], "help") == 0) {
+        printf("TODO\n");
+        return -1;
+
+    } else if (strcmp(argv[i], "hex") == 0) {
+        i++;
+        if (i >= argc) {
+            return -1;
+        }
+
+        b = parse_var_bytes_hex(argv[i]);
+        i += 1;
+
+    } else if (strcmp(argv[i], "ascii") == 0) {
+        i++;
+        if (i >= argc) {
+            return -1;
+        }
+
+        b = parse_var_bytes_ascii(argv[i]);
+        i += 1;
+
+    } else if (strcmp(argv[i], "ascii0") == 0) {
+        i++;
+        if (i >= argc) {
+            return -1;
+        }
+
+        b = parse_var_bytes_ascii0(argv[i]);
+        i += 1;
+
+    } else if (strcmp(argv[i], "repeat") == 0) {
+        i++;
+        if (i + 2 > argc) {
+            return -1;
+        }
+
+        b = parse_var_bytes_repeat(argv[i], argv[i + 1]);
+        i += 2;
+
+    } else if (strcmp(argv[i], "pattern") == 0) {
+        i++;
+        if (i + 2 > argc) {
+            return -1;
+        }
+
+        b = parse_var_bytes_pattern(argv[i], argv[i + 1]);
+        i += 2;
+
+    } else {
+        return 0;
+    }
+
+    if (b) {
+        *b_out = b;
+        return i;
+
+    } else {
+        return -1;
+
+    }
+}
+
+int parse_var_bytes(buf_t **b_out, int argc, const char *argv[]) {
+    int res;
+    int i = 0;
+    buf_t *b_res = 0;
+
+    while (i < argc) {
+        buf_t *b_tmp = 0;
+        res = parse_var_bytes_(&b_tmp, argc - i, argv + i);
+
+        if (res > 0) {
+            i += res;
+            if (b_res) {
+                buf_t *b_new = balloc(b_res->size + b_tmp->size);
+                if (!b_new) {
+                    bfree(b_res);
+                    bfree(b_tmp);
+                    return -1;
+                }
+
+                memcpy(b_new->data, b_res->data, b_res->size);
+                memcpy(b_new->data + b_res->size, b_tmp->data, b_tmp->size);
+                bfree(b_res);
+                bfree(b_tmp);
+                b_tmp = 0;
+                b_res = b_new;
+
+            } else {
+                b_res = b_tmp;
+            }
+
+        } else if (res == 0) {
+            break;
+
+        } else {
+            bfree(b_res);
+            bfree(b_tmp);
+            return res;
+        }
+    }
+
+    if (b_res && i)
+        *b_out = b_res;
+
+    return i;
+}

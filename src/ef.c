@@ -300,29 +300,9 @@ void frame_reset(frame_t *f) {
 }
 
 hdr_t *frame_clone_and_push_hdr(frame_t *f, hdr_t *h) {
-    hdr_t *new_hdr;
-    field_t *new_fields;
-    new_hdr = malloc(sizeof(*new_hdr));
-    new_fields = malloc(sizeof(*new_fields) * h->fields_size);
-
-    if (!new_hdr || !new_fields) {
-        if (new_hdr)
-            free(new_hdr);
-        if (new_fields)
-            free(new_fields);
-
-        return 0;
-    }
-
-    assert(f->stack_size < FRAME_STACK_MAX);
-    assert(!f->stack[f->stack_size]);
-
-    memcpy(new_hdr, h, sizeof(*h));
-    memcpy(new_fields, h->fields, sizeof(*new_fields) * h->fields_size);
-    new_hdr->fields = new_fields;
+    hdr_t *new_hdr = hdr_clone(h);
 
     f->stack[f->stack_size] = new_hdr;
-
     f->stack_size ++;
 
     return new_hdr;
@@ -402,8 +382,8 @@ buf_t *frame_to_buf(frame_t *f) {
         frame_size += f->stack[i]->size;
     }
 
-    if (frame_size < 64)
-        frame_size = 64;
+    if (frame_size < 60)
+        frame_size = 60;
 
     f->buf_size = frame_size;
 

@@ -41,7 +41,7 @@ int argc_frame(int argc, const char *argv[], frame_t *f) {
 
         //printf("Parsing hdr: %s: %p\n", h->name, h);
         //printf("%d, i=%d/%d %s\n", __LINE__, i, argc, argv[i]);
-        res = hdr_parse_fields(h, argc - i, argv + i);
+        res = h->parser(h, argc - i, argv + i);
         if (res < 0) {
             return res;
         }

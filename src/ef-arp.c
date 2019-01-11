@@ -36,6 +36,7 @@ hdr_t HDR_ARP = {
     .type = 0x0806,
     .fields = ARP_FIELDS,
     .fields_size = sizeof(ARP_FIELDS) / sizeof(ARP_FIELDS[0]),
+    .parser = hdr_parse_fields,
 };
 
 void arp_init() {

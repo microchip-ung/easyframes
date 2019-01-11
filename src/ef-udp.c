@@ -2,8 +2,8 @@
 #include "ef.h"
 
 field_t UDP_IPv4_CHKSUM_FIELDS[] = {
-    { .name = "sa",      .bit_width =  32 },
-    { .name = "da",      .bit_width =  32 },
+    { .name = "sip",     .bit_width =  32 },
+    { .name = "dip",     .bit_width =  32 },
     { .name = "zero",    .bit_width =   8 },
     { .name = "proto",   .bit_width =   8 },
     { .name = "udp_len", .bit_width =  16 },
@@ -44,11 +44,11 @@ int udp_fill_defaults(struct frame *f, int stack_idx) {
             // Alloc and fill the UDP checksum pseudo header.
             hdr_t *ipv4_chksum_hdr = hdr_clone(&HDR_UDP_IPV4_CHKSUM);
 
-            ll_field = find_field(ll, "sa");
-            find_field(ipv4_chksum_hdr, "sa")->val = bclone(ll_field->val);
+            ll_field = find_field(ll, "sip");
+            find_field(ipv4_chksum_hdr, "sip")->val = bclone(ll_field->val);
 
-            ll_field = find_field(ll, "da");
-            find_field(ipv4_chksum_hdr, "da")->val = bclone(ll_field->val);
+            ll_field = find_field(ll, "dip");
+            find_field(ipv4_chksum_hdr, "dip")->val = bclone(ll_field->val);
 
             find_field(ipv4_chksum_hdr, "proto")->val = parse_bytes("17", 1);
 
@@ -103,6 +103,7 @@ hdr_t HDR_UDP = {
     .fields = UDP_FIELDS,
     .fields_size = sizeof(UDP_FIELDS) / sizeof(UDP_FIELDS[0]),
     .frame_fill_defaults = udp_fill_defaults,
+    .parser = hdr_parse_fields,
 };
 
 void udp_init() {

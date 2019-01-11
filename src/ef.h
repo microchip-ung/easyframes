@@ -79,6 +79,9 @@ static inline name ## _t *name ## _clone(const name ## _t *src) {              \
 struct frame;
 typedef int (*frame_fill_defaults_t)(struct frame *, int stack_idx);
 
+struct hdr;
+typedef int (*hdr_parse_t)(struct hdr *hdr, int argc, const char *argv[]);
+
 typedef struct {
     const char *name;
     const char *help;
@@ -92,7 +95,7 @@ int field_copy(field_t *dst, const field_t *src);
 void field_destruct(field_t *f);
 GEN_ALLOC_CLONE_FREE(field);
 
-typedef struct {
+typedef struct hdr {
     const char *name;
     const char *help;
     uint32_t    type;
@@ -104,6 +107,8 @@ typedef struct {
     int         offset_in_frame;
 
     frame_fill_defaults_t frame_fill_defaults;
+
+    hdr_parse_t parser;
 } hdr_t;
 
 int hdr_copy(hdr_t *dst, const hdr_t *src);
@@ -121,8 +126,10 @@ int frame_copy(frame_t *dst, const frame_t *src);
 void frame_destruct(frame_t *f);
 GEN_ALLOC_CLONE_FREE(frame);
 
-
 buf_t *parse_bytes(const char *s, int bytes);
+int parse_uint8(const char *s, uint8_t *o);
+int parse_uint32(const char *s, uint32_t *o);
+int parse_var_bytes(buf_t **b, int argc, const char *argv[]);
 
 field_t *find_field(hdr_t *h, const char *field);
 

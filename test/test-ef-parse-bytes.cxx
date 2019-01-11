@@ -1,5 +1,6 @@
 #include "ef.h"
 
+#include <vector>
 #include "catch_single_include.hxx"
 
 struct HexBuf {
@@ -338,3 +339,46 @@ TEST_CASE("hdr_write_field", "[hdr_write_field]" ) {
 #undef X
 }
 
+
+buf_t *parse_var_bytes_wrap(std::vector<const char *> ptrs) {
+    buf_t *b = 0;
+    parse_var_bytes(&b, ptrs.size(), ptrs.data());
+    //CHECK(res == ptrs.size());
+    return b;
+}
+
+TEST_CASE("parse_var_bytes", "[parse_var_bytes]" ) {
+#define X(EXPECT, ...)                                     \
+    {                                                      \
+        buf_t *b1 = parse_var_bytes_wrap({ __VA_ARGS__ }); \
+        CHECK(hexstr(b1) == EXPECT);                       \
+    }
+
+    X("fedeabe0badebabe0011223344", "hex", "fedeabe0badebabe0011223344");
+    X("fedeabe0badebabe0011223344", "hex", "fede.abe0:bade-babe-0011223344");
+    X("48656c6c6f20776f726c64", "ascii", "Hello world");
+    X("48656c6c6f20776f726c6400", "ascii0", "Hello world");
+
+    X("ab",       "repeat", "1", "0xab");
+    X("abab",     "repeat", "2", "0xab");
+    X("ababab",   "repeat", "3", "0xab");
+    X("abababab", "repeat", "4", "0xab");
+    X("64646464", "repeat", "4", "100");
+
+    {
+        buf_t *b1 = parse_var_bytes_wrap({"repeat", "10000", "0xab"});
+        CHECK(b1->size == 10000);
+        char b2[10000];
+        memset(b2, 0xab, 10000);
+        CHECK(memcmp(b1->data, b2, 10000) == 0);
+    }
+
+    X("000102030405060708090a0b0c0d0e0f10111213", "pattern", "cnt", "20");
+    X("0000000000000000000000000000000000000000", "pattern", "zero", "20");
+    X("ffffffffffffffffffffffffffffffffffffffff", "pattern", "ones", "20");
+
+    X("aaaaaaaaaaaaaaaaaaaaacef00010203040506070809",
+      "repeat", "10", "0xaa", "hex", "acef", "pattern", "cnt", "10");
+
+#undef X
+}

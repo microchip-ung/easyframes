@@ -1,16 +1,34 @@
 #include "ef.h"
 
+static int payload_parser(hdr_t *hdr, int argc, const char *argv[]) {
+    int res;
+    buf_t *b = 0;
+
+    res = parse_var_bytes(&b, argc, argv);
+    if (res <= 0) {
+        bfree(b);
+        return res;
+    }
+
+    hdr->size = b->size;
+    hdr->fields[0].bit_width = b->size * 8;
+    hdr->fields[0].val = b;
+
+    return res;
+}
+
 field_t PAYLOAD_FIELDS[] = {
     { .name = "hex",
-      .help = "64 bit data",
-      .bit_width = 64 },
+      .help = "Variable length data",
+      .bit_width = 0 },
 };
 
 hdr_t HDR_PAYLOAD = {
-    .name = "payload",
+    .name = "data",
     .help = "Generic payload data",
     .fields = PAYLOAD_FIELDS,
     .fields_size = sizeof(PAYLOAD_FIELDS) / sizeof(PAYLOAD_FIELDS[0]),
+    .parser = payload_parser,
 };
 
 void payload_init() {

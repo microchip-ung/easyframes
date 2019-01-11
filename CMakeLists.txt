@@ -34,4 +34,5 @@ target_link_libraries(ef-tests libef)
 
 include(CTest)
 add_test(ef-tests ./ef-tests)
+add_test(parser-tests.rb ${CMAKE_CURRENT_SOURCE_DIR}/test/parser-tests.rb)
 

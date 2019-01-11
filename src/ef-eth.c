@@ -23,6 +23,7 @@ static hdr_t HDR_ETH = {
     .fields = ETH_FIELDS,
     .fields_size = sizeof(ETH_FIELDS) / sizeof(ETH_FIELDS[0]),
     .frame_fill_defaults = eth_fill_defaults,
+    .parser = hdr_parse_fields,
 };
 
 void eth_init() {

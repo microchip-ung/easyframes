@@ -84,11 +84,11 @@ field_t IPV4_FIELDS[] = {
     { .name = "chksum",
       .help = "Header Checksum",
       .bit_width =  16 },
-    { .name = "sa",
-      .help = "Source Address, e.g. 10.10.10.1",
+    { .name = "sip",
+      .help = "Source IP Address, e.g. 10.10.10.1",
       .bit_width =  32 },
-    { .name = "da",
-      .help = "Destination Address, e.g. 10.10.10.2",
+    { .name = "dip",
+      .help = "Destination IP Address, e.g. 10.10.10.2",
       .bit_width =  32 },
 };
 
@@ -99,6 +99,7 @@ hdr_t HDR_IPV4 = {
     .fields = IPV4_FIELDS,
     .fields_size = sizeof(IPV4_FIELDS) / sizeof(IPV4_FIELDS[0]),
     .frame_fill_defaults = ipv4_fill_defaults,
+    .parser = hdr_parse_fields,
 };
 
 void ipv4_init() {

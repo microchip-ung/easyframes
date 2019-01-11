@@ -26,6 +26,7 @@ hdr_t HDR_STAG = {
     .fields = STAG_FIELDS,
     .fields_size = sizeof(STAG_FIELDS) / sizeof(STAG_FIELDS[0]),
     .frame_fill_defaults = vlan_fill_defaults,
+    .parser = hdr_parse_fields,
 };
 
 field_t CTAG_FIELDS[] = {
@@ -50,6 +51,7 @@ hdr_t HDR_CTAG = {
     .fields = CTAG_FIELDS,
     .fields_size = sizeof(CTAG_FIELDS) / sizeof(CTAG_FIELDS[0]),
     .frame_fill_defaults = vlan_fill_defaults,
+    .parser = hdr_parse_fields,
 };
 
 void vlan_init() {
