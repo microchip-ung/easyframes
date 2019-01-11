@@ -156,6 +156,14 @@ typedef enum {
     HDR_TMPL_IPV4,
     HDR_TMPL_UDP,
     HDR_TMPL_PAYLOAD,
+    HDR_TMPL_SP_OC1,
+    HDR_TMPL_LP_OC1,
+    HDR_TMPL_IFH_OC1,
+    HDR_TMPL_EFH_OC1,
+    HDR_TMPL_SP_JR1,
+    HDR_TMPL_LP_JR1,
+    HDR_TMPL_IFH_JR2,
+    HDR_TMPL_EFH_JR2,
 
     HDR_TMPL_SIZE,
 } hdr_tmpl_t;

@@ -469,6 +469,7 @@ void arp_init();
 void ipv4_init();
 void udp_init();
 void payload_init();
+void ifh_init();
 
 void init() __attribute__ ((constructor));
 void init() {
@@ -478,6 +479,7 @@ void init() {
     ipv4_init();
     udp_init();
     payload_init();
+    ifh_init();
 }
 
 void eth_uninit();
@@ -486,6 +488,7 @@ void arp_uninit();
 void ipv4_uninit();
 void udp_uninit();
 void payload_uninit();
+void ifh_uninit();
 
 void uninit() __attribute__ ((destructor));
 void uninit() {
@@ -495,5 +498,6 @@ void uninit() {
     ipv4_uninit();
     udp_uninit();
     payload_uninit();
+    ifh_uninit();
 }
 

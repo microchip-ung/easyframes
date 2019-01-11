@@ -16,6 +16,7 @@ add_library(libef STATIC
     src/ef-ipv4.c
     src/ef-udp.c
     src/ef-payload.c
+    src/ef-ifh.c
 )
 
 add_executable(ef src/main.c)
