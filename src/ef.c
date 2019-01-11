@@ -171,10 +171,19 @@ int ether_type_fill_defaults(struct frame *f, int stack_idx) {
 void def_offset(hdr_t *h) {
     int i;
     int offset = 0;
+    field_t *f;
 
     for (i = 0; i < h->fields_size; ++i) {
-        h->fields[i].bit_offset = offset;
-        offset += h->fields[i].bit_width;
+        f = &h->fields[i];
+        if (f->bit_offset) {
+            if (f->bit_offset < offset)
+                continue;
+            else
+                printf("ERROR: Fields with explicit bit_offset must be "
+                       "specified after the one it overloads in field_t\n");
+        }
+        f->bit_offset = offset;
+        offset += f->bit_width;
     }
 
     h->size = BIT_TO_BYTE(offset);
