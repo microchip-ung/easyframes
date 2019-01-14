@@ -17,8 +17,9 @@
 #endif
 
 int raw_socket(const char *name) {
-    int s, res;
+    int s, res, val, ifidx;
     struct sockaddr_ll sa = {};
+    struct packet_mreq mr = {};
 
     if (!name)
         return -1;
@@ -29,6 +30,8 @@ int raw_socket(const char *name) {
         return -1;
     }
 
+    ifidx = if_nametoindex(name);
+
     sa.sll_family = PF_PACKET;
     sa.sll_ifindex = if_nametoindex(name);
     sa.sll_protocol = htons(ETH_P_ALL);
@@ -36,6 +39,23 @@ int raw_socket(const char *name) {
     res = bind(s, (struct sockaddr*)&sa, sizeof(sa));
     if (res < 0) {
         printf("%s:%d bind error: %m\n", __FILE__, __LINE__);
+        close(s);
+        return -1;
+    }
+
+    mr.mr_ifindex = ifidx;
+    mr.mr_type = PACKET_MR_PROMISC;
+    res = setsockopt(s, SOL_PACKET, PACKET_ADD_MEMBERSHIP, &mr, sizeof(mr));
+    if (res == -1) {
+        printf("%s:%d Failed to set PROMISC: %m\n", __FILE__, __LINE__);
+        close(s);
+        return -1;
+    }
+
+    val = 1;
+    setsockopt(s, SOL_PACKET, PACKET_AUXDATA, &val, sizeof(val));
+    if (res == -1) {
+        printf("%s:%d Failed to enable AUXDATA: %m\n", __FILE__, __LINE__);
         close(s);
         return -1;
     }
@@ -132,19 +152,60 @@ int rfds_wfds_fill(cmd_socket_t *resources, int res_valid, fd_set *rfds,
 
 int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
                       fd_set *wfds) {
-    int i, res, match;
+    int i, res, match, old_size;
     buf_t *b;
     cmd_t *cmd_ptr;
+    const uint16_t vlan_aux_tpid = htons(0x8100);
+
+    uint8_t cbuf[sizeof(struct cmsghdr) + sizeof(struct tpacket_auxdata) +
+            sizeof(size_t)] = {};
 
     for (i = 0; i < res_valid; i++) {
+        struct iovec iov = {};
+        struct msghdr msg = {};
+
         if (!FD_ISSET(resources[i].fd, rfds))
             continue;
 
         // read the frame, and try to match it
         b = balloc(32 * 1024);
-        res = recv(resources[i].fd, b->data, b->size, 0);
+
+        iov.iov_base = b->data;
+        iov.iov_len = b->size;
+        msg.msg_iov = &iov;
+        msg.msg_iovlen = 1;
+        msg.msg_control = cbuf;
+        msg.msg_controllen = sizeof(cbuf);
+
+        res = recvmsg(resources[i].fd, &msg, 0);
         if (res > 0) {
+            old_size = b->size;
             b->size = res;
+
+            // We need to get the vlan ID from AUX data
+            if (msg.msg_controllen >= sizeof(struct cmsghdr) &&
+                res + 4 < old_size) {
+                struct cmsghdr* cmsg = (struct cmsghdr*)cbuf;
+
+                if ((cmsg->cmsg_level == SOL_PACKET) &&
+                    (cmsg->cmsg_type == PACKET_AUXDATA)) {
+
+                    struct tpacket_auxdata* aux =
+                            (struct tpacket_auxdata*)CMSG_DATA(cmsg);
+
+                    if ((aux->tp_vlan_tci != 0) ||
+                        (aux->tp_status & TP_STATUS_VLAN_VALID)) {
+                        uint16_t vid = htons(aux->tp_vlan_tci);
+
+                        // make room and re-add the vlan tag
+                        memmove(b->data + 16, b->data + 12, res - 12);
+                        memcpy(b->data + 12, &vlan_aux_tpid,
+                               sizeof(vlan_aux_tpid));
+                        memcpy(b->data + 14, &vid, sizeof(vid));
+                        b->size += 4;
+                    }
+                }
+            }
 
             // Try to match the frame agains expected frames
             match = 0;
