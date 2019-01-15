@@ -155,7 +155,6 @@ int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
     int i, res, match, old_size;
     buf_t *b;
     cmd_t *cmd_ptr;
-    const uint16_t vlan_aux_tpid = htons(0x8100);
 
     uint8_t cbuf[sizeof(struct cmsghdr) + sizeof(struct tpacket_auxdata) +
             sizeof(size_t)] = {};
@@ -193,15 +192,14 @@ int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
                     struct tpacket_auxdata* aux =
                             (struct tpacket_auxdata*)CMSG_DATA(cmsg);
 
-                    if ((aux->tp_vlan_tci != 0) ||
-                        (aux->tp_status & TP_STATUS_VLAN_VALID)) {
-                        uint16_t vid = htons(aux->tp_vlan_tci);
+                    if (aux->tp_status & TP_STATUS_VLAN_VALID) {
+                        uint16_t tci = htons(aux->tp_vlan_tci);
+                        uint16_t tpid = htons(aux->tp_vlan_tpid);
 
                         // make room and re-add the vlan tag
                         memmove(b->data + 16, b->data + 12, res - 12);
-                        memcpy(b->data + 12, &vlan_aux_tpid,
-                               sizeof(vlan_aux_tpid));
-                        memcpy(b->data + 14, &vid, sizeof(vid));
+                        memcpy(b->data + 12, &tpid, sizeof(tpid));
+                        memcpy(b->data + 14, &tci, sizeof(tci));
                         b->size += 4;
                     }
                 }
