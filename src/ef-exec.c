@@ -445,8 +445,13 @@ int exec_cmds(int cnt, cmd_t *cmds) {
                 continue;
 
             dprintf(2, "NO-RX  %16s: ", cmd_ptr->arg0);
-            print_hex_str(2, cmd_ptr->frame_buf->data,
-                          cmd_ptr->frame_buf->size);
+            if (cmd_ptr->name) {
+                dprintf(2, "name %s", cmd_ptr->name);
+            } else {
+                print_hex_str(2, cmd_ptr->frame_buf->data,
+                              cmd_ptr->frame_buf->size);
+            }
+
             dprintf(2, "\n");
 
             err++;
