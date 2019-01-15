@@ -22,7 +22,9 @@ add_library(libef STATIC
 add_executable(ef src/main.c)
 target_link_libraries(ef libef pcap)
 
-install(TARGETS ef DESTINATION bin)
+add_executable(er src/er.c)
+
+install(TARGETS ef er DESTINATION bin)
 
 # TEST ONLY
 set(CMAKE_CXX_STANDARD 14)
