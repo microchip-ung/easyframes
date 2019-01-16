@@ -409,7 +409,9 @@ void field_help(field_t *f, int indent)
         printf(" ");
     }
 
-    printf("%-16s", f->name);
+    printf("%-20s", f->name);
+    printf("+%3d:%3d ", f->bit_offset, f->bit_width);
+
     if (f->help)
         printf(" %s", f->help);
     else
@@ -445,6 +447,10 @@ void hdr_help(hdr_t **hdr, int size, int indent, int show_fields)
             printf("\n");
             printf("Specify the %s header by using one or more of the following fields:\n",
                    h->name);
+            for (j = 0; j < indent; ++j) {
+                printf(" ");
+            }
+            printf("- Name ------------ offset:width --- Description --------------------------\n");
             for (j = 0; j < h->fields_size; ++j) {
                 field_help(&h->fields[j], indent + 2);
             }
