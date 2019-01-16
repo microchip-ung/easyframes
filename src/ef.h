@@ -172,6 +172,7 @@ typedef enum {
     HDR_TMPL_SP_JR2,  /* Short prefix */
     HDR_TMPL_LP_JR2,  /* Long prefix */
     HDR_TMPL_IFH_JR2, /* Internal frame header */
+    HDR_TMPL_IPV6,
 
     HDR_TMPL_SIZE,
 } hdr_tmpl_t;

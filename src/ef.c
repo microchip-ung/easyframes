@@ -465,6 +465,7 @@ void ipv4_init();
 void udp_init();
 void payload_init();
 void ifh_init();
+void ipv6_init();
 
 void init() __attribute__ ((constructor));
 void init() {
@@ -475,6 +476,7 @@ void init() {
     udp_init();
     payload_init();
     ifh_init();
+    ipv6_init();
 }
 
 void eth_uninit();
@@ -484,6 +486,7 @@ void ipv4_uninit();
 void udp_uninit();
 void payload_uninit();
 void ifh_uninit();
+void ipv6_uninit();
 
 void uninit() __attribute__ ((destructor));
 void uninit() {
@@ -494,5 +497,6 @@ void uninit() {
     udp_uninit();
     payload_uninit();
     ifh_uninit();
+    ipv6_uninit();
 }
 
