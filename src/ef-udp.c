@@ -1,26 +1,40 @@
 #include <stdio.h>
 #include "ef.h"
 
-field_t UDP_IPv4_CHKSUM_FIELDS[] = {
+field_t IPv4_PSEUDO_FIELDS[] = {
     { .name = "sip",     .bit_width =  32 },
     { .name = "dip",     .bit_width =  32 },
     { .name = "zero",    .bit_width =   8 },
     { .name = "proto",   .bit_width =   8 },
-    { .name = "udp_len", .bit_width =  16 },
+    { .name = "len",     .bit_width =  16 },
 };
 
-hdr_t HDR_UDP_IPV4_CHKSUM = {
-    .name = "udp_ip_chksum",
-    .fields = UDP_IPv4_CHKSUM_FIELDS,
-    .fields_size = sizeof(UDP_IPv4_CHKSUM_FIELDS) /
-            sizeof(UDP_IPv4_CHKSUM_FIELDS[0]),
+hdr_t HDR_IPV4_PSEUDO = {
+    .name = "ipv4-pseudo",
+    .fields = IPv4_PSEUDO_FIELDS,
+    .fields_size = sizeof(IPv4_PSEUDO_FIELDS) /
+            sizeof(IPv4_PSEUDO_FIELDS[0]),
+};
+
+field_t IPv6_PSEUDO_FIELDS[] = {
+    { .name = "sip",     .bit_width = 128 },
+    { .name = "dip",     .bit_width = 128 },
+    { .name = "len",     .bit_width =  32 },
+    { .name = "zero",    .bit_width =  24 },
+    { .name = "proto",   .bit_width =   8 },
+};
+
+hdr_t HDR_IPV6_PSEUDO = {
+    .name = "ipv6-pseudo",
+    .fields = IPv6_PSEUDO_FIELDS,
+    .fields_size = sizeof(IPv6_PSEUDO_FIELDS) /
+            sizeof(IPv6_PSEUDO_FIELDS[0]),
 };
 
 int udp_fill_defaults(struct frame *f, int stack_idx) {
-    int i, udp_len = 0, offset, sum;
+    int i, udp_len = 0;
     char buf[16];
     hdr_t *h = f->stack[stack_idx];
-    hdr_t *ll;
     field_t *chksum = find_field(h, "chksum");
     field_t *len = find_field(h, "len");
 
@@ -35,49 +49,51 @@ int udp_fill_defaults(struct frame *f, int stack_idx) {
     }
 
     if (!chksum->val && stack_idx >= 1) {
-        ll = f->stack[stack_idx - 1];
+        hdr_t *ll = f->stack[stack_idx - 1];
+        hdr_t *pseudo_hdr;
+        field_t *pseudo_len;
+        buf_t *b;
+        int offset, sum;
 
-        // TODO, ipv6
         if (strcmp(ll->name, "ipv4") == 0) {
-            field_t *ll_field;
-
-            // Alloc and fill the UDP checksum pseudo header.
-            hdr_t *ipv4_chksum_hdr = hdr_clone(&HDR_UDP_IPV4_CHKSUM);
-
-            ll_field = find_field(ll, "sip");
-            find_field(ipv4_chksum_hdr, "sip")->val = bclone(ll_field->val);
-
-            ll_field = find_field(ll, "dip");
-            find_field(ipv4_chksum_hdr, "dip")->val = bclone(ll_field->val);
-
-            find_field(ipv4_chksum_hdr, "proto")->val = parse_bytes("17", 1);
-
-            snprintf(buf, 16, "%d", udp_len);
-            buf[15] = 0;
-            find_field(ipv4_chksum_hdr, "udp_len")->val = parse_bytes(buf, 2);
-
-            // 12 is the size of the ip-header-for-udp-calc
-            buf_t *b = balloc(udp_len + 12);
-
-            // Serialize the header (making checksum calculation easier)
-            hdr_copy_to_buf(ipv4_chksum_hdr, 0, b);
-            offset = ipv4_chksum_hdr->size;
-            for (i = stack_idx; i < f->stack_size; ++i) {
-                hdr_copy_to_buf(f->stack[i], offset, b);
-                offset += f->stack[i]->size;
-            }
-
-            // Write the checksum to the header
-            sum = inet_chksum(0, (uint16_t *)b->data, b->size);
-            snprintf(buf, 16, "%d", sum);
-            buf[15] = 0;
-            chksum->val = parse_bytes(buf, 2);
-
-            bfree(b);
-            hdr_free(ipv4_chksum_hdr);
+            pseudo_hdr = hdr_clone(&HDR_IPV4_PSEUDO);
+        } else if (strcmp(ll->name, "ipv6") == 0) {
+            pseudo_hdr = hdr_clone(&HDR_IPV6_PSEUDO);
+        } else {
+            return 0;
         }
-    }
 
+        // Clone selected parts of ip header into pseudo header
+        find_field(pseudo_hdr, "sip")->val = bclone(find_field(ll, "sip")->val);
+        find_field(pseudo_hdr, "dip")->val = bclone(find_field(ll, "dip")->val);
+
+        // Set proto to UDP in pseudo header
+        find_field(pseudo_hdr, "proto")->val = parse_bytes("17", 1);
+
+        // Set len in pseudo header. Size of len is different in ipv4 and 6
+        snprintf(buf, 16, "%d", udp_len);
+        buf[15] = 0;
+        pseudo_len = find_field(pseudo_hdr, "len");
+        pseudo_len->val = parse_bytes(buf, pseudo_len->bit_width / 8);
+
+        // Serialize the header (making checksum calculation easier)
+        b = balloc(udp_len + pseudo_hdr->size);
+        hdr_copy_to_buf(pseudo_hdr, 0, b);
+        offset = pseudo_hdr->size;
+        for (i = stack_idx; i < f->stack_size; ++i) {
+            hdr_copy_to_buf(f->stack[i], offset, b);
+            offset += f->stack[i]->size;
+        }
+
+        // Write the checksum to the header
+        sum = inet_chksum(0, (uint16_t *)b->data, b->size);
+        snprintf(buf, 16, "%d", sum);
+        buf[15] = 0;
+        chksum->val = parse_bytes(buf, 2);
+
+        bfree(b);
+        hdr_free(pseudo_hdr);
+    }
     return 0;
 }
 
@@ -108,14 +124,16 @@ hdr_t HDR_UDP = {
 
 void udp_init() {
     def_offset(&HDR_UDP);
-    def_offset(&HDR_UDP_IPV4_CHKSUM);
+    def_offset(&HDR_IPV4_PSEUDO);
+    def_offset(&HDR_IPV6_PSEUDO);
 
     hdr_tmpls[HDR_TMPL_UDP] = &HDR_UDP;
 }
 
 void udp_uninit() {
     uninit_frame_data(&HDR_UDP);
-    uninit_frame_data(&HDR_UDP_IPV4_CHKSUM);
+    uninit_frame_data(&HDR_IPV4_PSEUDO);
+    uninit_frame_data(&HDR_IPV6_PSEUDO);
 
     hdr_tmpls[HDR_TMPL_UDP] = 0;
 }

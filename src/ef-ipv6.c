@@ -53,20 +53,20 @@ field_t IPV6_FIELDS[] = {
     { .name = "next",
       .help = "Next Header, i.e. type of header that follows the IPv6 header",
       .bit_width =  8  },
-    { .name = "hop",
-      .help = "Hop Limit - replaces TTL in IPv4",
+    { .name = "hlim",
+      .help = "Hop Limit - same as TTL in IPv4",
       .bit_width =  8  },
     { .name = "sip",
-      .help = "Source IP Address, e.g. 10.10.10.1",
+      .help = "Source IP Address, e.g. 2001:db8::1",
       .bit_width = 128 },
     { .name = "dip",
-      .help = "Destination IP Address, e.g. 10.10.10.2",
+      .help = "Destination IP Address, e.g. 2001:db8::2",
       .bit_width = 128 },
 };
 
 hdr_t HDR_IPV6 = {
     .name = "ipv6",
-    .help = "Internet Protocol version 6, e.g. ipv6 sip 10.10.10.1 dip 10.10.10.2",
+    .help = "Internet Protocol version 6, e.g. ipv6 sip 2001:db8::1 dip 2001:db8::2",
     .type = 0x86dd,
     .fields = IPV6_FIELDS,
     .fields_size = sizeof(IPV6_FIELDS) / sizeof(IPV6_FIELDS[0]),
@@ -77,7 +77,7 @@ hdr_t HDR_IPV6 = {
 void ipv6_init() {
     def_offset(&HDR_IPV6);
     def_val(&HDR_IPV6, "ver", "6");
-    def_val(&HDR_IPV6, "hop", "31");
+    def_val(&HDR_IPV6, "hlim", "31");
 
     hdr_tmpls[HDR_TMPL_IPV6] = &HDR_IPV6;
 }
