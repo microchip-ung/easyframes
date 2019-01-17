@@ -158,13 +158,6 @@ void field_help(field_t *f, int indent);
 void hdr_help(hdr_t **hdr, int size, int indent, int show_fields);
 
 typedef enum {
-    HDR_TMPL_ETH,
-    HDR_TMPL_CTAG,
-    HDR_TMPL_STAG,
-    HDR_TMPL_ARP,
-    HDR_TMPL_IPV4,
-    HDR_TMPL_UDP,
-    HDR_TMPL_PAYLOAD,
     HDR_TMPL_SP_OC1,  /* Short prefix */
     HDR_TMPL_LP_OC1,  /* Long prefix */
     HDR_TMPL_IFH_OC1, /* Injection frame header */
@@ -172,7 +165,15 @@ typedef enum {
     HDR_TMPL_SP_JR2,  /* Short prefix */
     HDR_TMPL_LP_JR2,  /* Long prefix */
     HDR_TMPL_IFH_JR2, /* Internal frame header */
+    HDR_TMPL_ETH,
+    HDR_TMPL_CTAG,
+    HDR_TMPL_STAG,
+    HDR_TMPL_ARP,
+    HDR_TMPL_IPV4,
     HDR_TMPL_IPV6,
+    HDR_TMPL_ICMP,
+    HDR_TMPL_UDP,
+    HDR_TMPL_PAYLOAD,
 
     HDR_TMPL_SIZE,
 } hdr_tmpl_t;

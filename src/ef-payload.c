@@ -17,13 +17,13 @@ static int payload_parser(hdr_t *hdr, int argc, const char *argv[]) {
     return res;
 }
 
-field_t PAYLOAD_FIELDS[] = {
+static field_t PAYLOAD_FIELDS[] = {
     { .name = "hex",
       .help = "Variable length data",
       .bit_width = 0 },
 };
 
-hdr_t HDR_PAYLOAD = {
+static hdr_t HDR_PAYLOAD = {
     .name = "data",
     .help = "Generic payload data",
     .fields = PAYLOAD_FIELDS,

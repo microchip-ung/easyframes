@@ -458,45 +458,49 @@ void hdr_help(hdr_t **hdr, int size, int indent, int show_fields)
     }
 }
 
+void ifh_init();
 void eth_init();
 void vlan_init();
 void arp_init();
 void ipv4_init();
+void ipv6_init();
+void icmp_init();
 void udp_init();
 void payload_init();
-void ifh_init();
-void ipv6_init();
 
 void init() __attribute__ ((constructor));
 void init() {
+    ifh_init();
     eth_init();
     vlan_init();
     arp_init();
     ipv4_init();
+    ipv6_init();
+    icmp_init();
     udp_init();
     payload_init();
-    ifh_init();
-    ipv6_init();
 }
 
+void ifh_uninit();
 void eth_uninit();
 void vlan_uninit();
 void arp_uninit();
 void ipv4_uninit();
+void ipv6_uninit();
+void icmp_uninit();
 void udp_uninit();
 void payload_uninit();
-void ifh_uninit();
-void ipv6_uninit();
 
 void uninit() __attribute__ ((destructor));
 void uninit() {
+    ifh_uninit();
     eth_uninit();
     vlan_uninit();
     arp_uninit();
     ipv4_uninit();
+    ipv6_uninit();
+    icmp_uninit();
     udp_uninit();
     payload_uninit();
-    ifh_uninit();
-    ipv6_uninit();
 }
 

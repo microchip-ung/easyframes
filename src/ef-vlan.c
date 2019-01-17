@@ -4,7 +4,7 @@ static int vlan_fill_defaults(struct frame *f, int stack_idx) {
     return ether_type_fill_defaults(f, stack_idx);
 }
 
-field_t STAG_FIELDS[] = {
+static field_t STAG_FIELDS[] = {
     { .name = "pcp",
       .help = "Priority Code Point",
       .bit_width =   3 },
@@ -19,7 +19,7 @@ field_t STAG_FIELDS[] = {
       .bit_width =  16 },
 };
 
-hdr_t HDR_STAG = {
+static hdr_t HDR_STAG = {
     .name = "stag",
     .help = "Service VLAN Tag",
     .type = 0x88A8,
@@ -29,7 +29,7 @@ hdr_t HDR_STAG = {
     .parser = hdr_parse_fields,
 };
 
-field_t CTAG_FIELDS[] = {
+static field_t CTAG_FIELDS[] = {
     { .name = "pcp",
       .help = "Priority Code Point",
       .bit_width =   3 },
@@ -44,7 +44,7 @@ field_t CTAG_FIELDS[] = {
       .bit_width =  16 },
 };
 
-hdr_t HDR_CTAG = {
+static hdr_t HDR_CTAG = {
     .name = "ctag",
     .help = "Customer VLAN Tag",
     .type = 0x8100,

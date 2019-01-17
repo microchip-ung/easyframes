@@ -34,7 +34,7 @@ static int ipv6_fill_defaults(struct frame *f, int stack_idx) {
     return 0;
 }
 
-field_t IPV6_FIELDS[] = {
+static field_t IPV6_FIELDS[] = {
     { .name = "ver",
       .help = "Four-bit version field, e.g. 6 for IPv6",
       .bit_width =  4  },
@@ -64,7 +64,7 @@ field_t IPV6_FIELDS[] = {
       .bit_width = 128 },
 };
 
-hdr_t HDR_IPV6 = {
+static hdr_t HDR_IPV6 = {
     .name = "ipv6",
     .help = "Internet Protocol version 6, e.g. ipv6 sip 2001:db8::1 dip 2001:db8::2",
     .type = 0x86dd,

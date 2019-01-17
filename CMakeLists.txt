@@ -10,14 +10,15 @@ add_library(libef STATIC
     src/ef-parse-bytes.c
     src/ef-exec.c
     src/ef-buf.c
+    src/ef-ifh.c
     src/ef-eth.c
     src/ef-vlan.c
     src/ef-arp.c
     src/ef-ipv4.c
+    src/ef-ipv6.c
+    src/ef-icmp.c
     src/ef-udp.c
     src/ef-payload.c
-    src/ef-ifh.c
-    src/ef-ipv6.c
 )
 
 add_executable(ef src/main.c)

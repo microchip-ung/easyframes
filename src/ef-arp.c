@@ -1,6 +1,6 @@
 #include "ef.h"
 
-field_t ARP_FIELDS[] = {
+static field_t ARP_FIELDS[] = {
     { .name = "htype",
       .help = "Hardware type, e.g. 0x0001 for Ethernet",
       .bit_width =  16 },
@@ -30,7 +30,7 @@ field_t ARP_FIELDS[] = {
       .bit_width =  32 },
 };
 
-hdr_t HDR_ARP = {
+static hdr_t HDR_ARP = {
     .name = "arp",
     .help = "Address Resolution Protocol, e.g. arp oper 1 spa 10.10.10.1",
     .type = 0x0806,

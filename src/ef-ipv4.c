@@ -49,8 +49,7 @@ static int ipv4_fill_defaults(struct frame *f, int stack_idx) {
     return 0;
 }
 
-
-field_t IPV4_FIELDS[] = {
+static field_t IPV4_FIELDS[] = {
     { .name = "ver",
       .help = "Four-bit version field, e.g. 4 for IPv4",
       .bit_width =  4  },
@@ -92,7 +91,7 @@ field_t IPV4_FIELDS[] = {
       .bit_width =  32 },
 };
 
-hdr_t HDR_IPV4 = {
+static hdr_t HDR_IPV4 = {
     .name = "ipv4",
     .help = "Internet Protocol version 4, e.g. ipv4 sa 10.10.10.1 da 10.10.10.2",
     .type = 0x0800,

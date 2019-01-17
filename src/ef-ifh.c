@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "ef.h"
 
-field_t SP_OC1_FIELDS[] = {
+static field_t SP_OC1_FIELDS[] = {
     { .name = "et",
       .help = "Ethertype for short prefix. Defaults to 0x8880",
       .bit_width =  16 },
@@ -10,7 +10,7 @@ field_t SP_OC1_FIELDS[] = {
       .bit_width =  16 },
 };
 
-hdr_t HDR_SP_OC1 = {
+static hdr_t HDR_SP_OC1 = {
     .name = "sp-oc1",
     .help = "Short prefix for injection and extraction of frames for Ocelot1",
     .fields = SP_OC1_FIELDS,
@@ -18,7 +18,7 @@ hdr_t HDR_SP_OC1 = {
     .parser = hdr_parse_fields,
 };
 
-field_t LP_OC1_FIELDS[] = {
+static field_t LP_OC1_FIELDS[] = {
     { .name = "dmac",
       .help = "Destination MAC address. Defaults to ff:ff:ff:ff:ff:ff",
       .bit_width =  48 },
@@ -33,7 +33,7 @@ field_t LP_OC1_FIELDS[] = {
       .bit_width =  16 },
 };
 
-hdr_t HDR_LP_OC1 = {
+static hdr_t HDR_LP_OC1 = {
     .name = "lp-oc1",
     .help = "Long prefix for injection and extraction of frames for Ocelot1",
     .fields = LP_OC1_FIELDS,
@@ -41,7 +41,7 @@ hdr_t HDR_LP_OC1 = {
     .parser = hdr_parse_fields,
 };
 
-field_t IFH_OC1_FIELDS[] = {
+static field_t IFH_OC1_FIELDS[] = {
     { .name = "bypass",
       .help = "Skip analyzer processing",
       .bit_width =   1 },
@@ -116,7 +116,7 @@ field_t IFH_OC1_FIELDS[] = {
       .bit_width =  12 },
 };
 
-hdr_t HDR_IFH_OC1 = {
+static hdr_t HDR_IFH_OC1 = {
     .name = "ifh-oc1",
     .help = "Injection Frame Header for Ocelot1",
     .fields = IFH_OC1_FIELDS,
@@ -124,7 +124,7 @@ hdr_t HDR_IFH_OC1 = {
     .parser = hdr_parse_fields,
 };
 
-field_t EFH_OC1_FIELDS[] = {
+static field_t EFH_OC1_FIELDS[] = {
     { .name = "res1",
       .help = "Reserved",
       .bit_width =   1 },
@@ -187,7 +187,7 @@ field_t EFH_OC1_FIELDS[] = {
       .bit_width =  12 },
 };
 
-hdr_t HDR_EFH_OC1 = {
+static hdr_t HDR_EFH_OC1 = {
     .name = "efh-oc1",
     .help = "Extraction Frame Header for Ocelot1",
     .fields = EFH_OC1_FIELDS,
@@ -195,7 +195,7 @@ hdr_t HDR_EFH_OC1 = {
     .parser = hdr_parse_fields,
 };
 
-field_t SP_JR2_FIELDS[] = {
+static field_t SP_JR2_FIELDS[] = {
     { .name = "dmac",
       .help = "Destination MAC address. Defaults to ff:ff:ff:ff:ff:ff",
       .bit_width =  48 },
@@ -210,7 +210,7 @@ field_t SP_JR2_FIELDS[] = {
       .bit_width =  16 },
 };
 
-hdr_t HDR_SP_JR2 = {
+static hdr_t HDR_SP_JR2 = {
     .name = "sp-jr2",
     .help = "Short prefix for injection and extraction of frames for Jaguar2",
     .fields = SP_JR2_FIELDS,
@@ -218,7 +218,7 @@ hdr_t HDR_SP_JR2 = {
     .parser = hdr_parse_fields,
 };
 
-field_t LP_JR2_FIELDS[] = {
+static field_t LP_JR2_FIELDS[] = {
     { .name = "dmac",
       .help = "Destination MAC address. Defaults to ff:ff:ff:ff:ff:ff",
       .bit_width =  48 },
@@ -245,7 +245,7 @@ field_t LP_JR2_FIELDS[] = {
       .bit_width =  16 },
 };
 
-hdr_t HDR_LP_JR2 = {
+static hdr_t HDR_LP_JR2 = {
     .name = "lp-jr2",
     .help = "Long prefix for injection and extraction of frames for Jaguar2",
     .fields = LP_JR2_FIELDS,
@@ -253,7 +253,7 @@ hdr_t HDR_LP_JR2 = {
     .parser = hdr_parse_fields,
 };
 
-field_t IFH_JR2_FIELDS[] = {
+static field_t IFH_JR2_FIELDS[] = {
     { .name = "ts",
       .help = "Arrival time stamp",
       .bit_width =  32 },
@@ -641,7 +641,7 @@ field_t IFH_JR2_FIELDS[] = {
       .bit_width =   6 },
 };
 
-hdr_t HDR_IFH_JR2 = {
+static hdr_t HDR_IFH_JR2 = {
     .name = "ifh-jr2",
     .help = "Internal Frame Header for Jaguar2",
     .fields = IFH_JR2_FIELDS,

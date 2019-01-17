@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "ef.h"
 
-field_t IPv4_PSEUDO_FIELDS[] = {
+static field_t IPv4_PSEUDO_FIELDS[] = {
     { .name = "sip",     .bit_width =  32 },
     { .name = "dip",     .bit_width =  32 },
     { .name = "zero",    .bit_width =   8 },
@@ -9,14 +9,14 @@ field_t IPv4_PSEUDO_FIELDS[] = {
     { .name = "len",     .bit_width =  16 },
 };
 
-hdr_t HDR_IPV4_PSEUDO = {
+static hdr_t HDR_IPV4_PSEUDO = {
     .name = "ipv4-pseudo",
     .fields = IPv4_PSEUDO_FIELDS,
     .fields_size = sizeof(IPv4_PSEUDO_FIELDS) /
             sizeof(IPv4_PSEUDO_FIELDS[0]),
 };
 
-field_t IPv6_PSEUDO_FIELDS[] = {
+static field_t IPv6_PSEUDO_FIELDS[] = {
     { .name = "sip",     .bit_width = 128 },
     { .name = "dip",     .bit_width = 128 },
     { .name = "len",     .bit_width =  32 },
@@ -31,7 +31,7 @@ hdr_t HDR_IPV6_PSEUDO = {
             sizeof(IPv6_PSEUDO_FIELDS[0]),
 };
 
-int udp_fill_defaults(struct frame *f, int stack_idx) {
+static int udp_fill_defaults(struct frame *f, int stack_idx) {
     int i, udp_len = 0;
     char buf[16];
     hdr_t *h = f->stack[stack_idx];
@@ -97,7 +97,7 @@ int udp_fill_defaults(struct frame *f, int stack_idx) {
     return 0;
 }
 
-field_t UDP_FIELDS[] = {
+static field_t UDP_FIELDS[] = {
     { .name = "sport",
       .help = "Source Port Number, e.g. 22 for SSH",
       .bit_width =  16 },
@@ -112,7 +112,7 @@ field_t UDP_FIELDS[] = {
       .bit_width =  16 },
 };
 
-hdr_t HDR_UDP = {
+static hdr_t HDR_UDP = {
     .name = "udp",
     .help = "User Datagram Protocol",
     .type = 17,
