@@ -15,33 +15,32 @@ static int icmp_fill_defaults(struct frame *f, int stack_idx) {
         icmp_len += f->stack[i]->size;
     }
 
-    if (!chksum->val && stack_idx >= 1) {
-        hdr_t *ll = f->stack[stack_idx - 1];
+    if (!chksum->val) {
         hdr_t *pseudo_hdr = NULL;
         int pseudo_hdr_size = 0;
         buf_t *b;
         int offset, sum;
 
-        if (strcmp(ll->name, "ipv4") == 0) {
-            pseudo_hdr_size = 0;
-        } else if (strcmp(ll->name, "ipv6") == 0) {
-            pseudo_hdr = hdr_clone(&HDR_IPV6_PSEUDO);
-            pseudo_hdr_size = pseudo_hdr->size;
+        if (stack_idx >= 1) {
+            hdr_t *ll = f->stack[stack_idx - 1];
 
-            // Clone selected parts of ip header into pseudo header
-            find_field(pseudo_hdr, "sip")->val = bclone(find_field(ll, "sip")->val);
-            find_field(pseudo_hdr, "dip")->val = bclone(find_field(ll, "dip")->val);
+            if (strcmp(ll->name, "ipv6") == 0) {
+                pseudo_hdr = hdr_clone(&HDR_IPV6_PSEUDO);
+                pseudo_hdr_size = pseudo_hdr->size;
 
-            // Set proto to ICMPv6 in pseudo header and update our own type
-            find_field(pseudo_hdr, "proto")->val = parse_bytes("58", 1);
-            h->type = 58;
+                // Clone selected parts of ip header into pseudo header
+                find_field(pseudo_hdr, "sip")->val = bclone(find_field(ll, "sip")->val);
+                find_field(pseudo_hdr, "dip")->val = bclone(find_field(ll, "dip")->val);
 
-            // Set len in pseudo header
-            snprintf(buf, 16, "%d", icmp_len);
-            buf[15] = 0;
-            find_field(pseudo_hdr, "len")->val = parse_bytes(buf, 4);
-        } else {
-            return 0;
+                // Set proto to ICMPv6 in pseudo header and update our own type
+                find_field(pseudo_hdr, "proto")->val = parse_bytes("58", 1);
+                h->type = 58;
+
+                // Set len in pseudo header
+                snprintf(buf, 16, "%d", icmp_len);
+                buf[15] = 0;
+                find_field(pseudo_hdr, "len")->val = parse_bytes(buf, 4);
+            }
         }
 
         // Serialize the header (making checksum calculation easier)
