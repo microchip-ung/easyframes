@@ -465,6 +465,7 @@ void arp_init();
 void ipv4_init();
 void ipv6_init();
 void icmp_init();
+void igmp_init();
 void udp_init();
 void payload_init();
 
@@ -477,6 +478,7 @@ void init() {
     ipv4_init();
     ipv6_init();
     icmp_init();
+    igmp_init();
     udp_init();
     payload_init();
 }
@@ -488,6 +490,7 @@ void arp_uninit();
 void ipv4_uninit();
 void ipv6_uninit();
 void icmp_uninit();
+void igmp_uninit();
 void udp_uninit();
 void payload_uninit();
 
@@ -500,6 +503,7 @@ void uninit() {
     ipv4_uninit();
     ipv6_uninit();
     icmp_uninit();
+    igmp_uninit();
     udp_uninit();
     payload_uninit();
 }
