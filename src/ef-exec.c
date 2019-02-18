@@ -285,6 +285,9 @@ buf_t *frame_by_name(const char *name, int cnt, cmd_t *cmds) {
         if (!cmds[i].frame_buf || !cmds[i].name)
             continue;
 
+        if (strcmp(cmds[i].name, name) != 0)
+            continue;
+
         return bclone(cmds[i].frame_buf);
     }
 
