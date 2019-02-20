@@ -11,6 +11,7 @@
 #include <linux/if_packet.h>
 #include <pcap/pcap.h>
 #include <assert.h>
+#include <sys/time.h>
 
 #ifndef MAX
 #define MAX(a, b) (a > b ? a : b)
@@ -344,7 +345,7 @@ int pcap_append(cmd_t *c) {
 }
 
 int exec_cmds(int cnt, cmd_t *cmds) {
-    struct timeval tv;
+    struct timeval tv_now, tv_left, tv_begin, tv_end;
     int i, res, fd_max, err = 0;
     int res_valid = 0;
     cmd_socket_t resources[100] = {};
@@ -420,16 +421,29 @@ int exec_cmds(int cnt, cmd_t *cmds) {
             return -1;
     }
 
-    tv.tv_sec = TIME_OUT_MS / 1000;
-    tv.tv_usec = (TIME_OUT_MS - (tv.tv_sec * 1000)) * 1000;
+    timerclear(&tv_now);
+    timerclear(&tv_end);
+    timerclear(&tv_left);
+    timerclear(&tv_begin);
 
+    tv_left.tv_sec = TIME_OUT_MS / 1000;
+    tv_left.tv_usec = (TIME_OUT_MS - (tv_left.tv_sec * 1000)) * 1000;
+
+    gettimeofday(&tv_begin, 0);
+    timeradd(&tv_begin, &tv_left, &tv_end);
     while (1) {
         fd_max = rfds_wfds_fill(resources, res_valid, &rfds, &wfds);
         if (fd_max < 0) {
             break;
         }
 
-        res = select(fd_max + 1, &rfds, &wfds, 0, &tv);
+        res = select(fd_max + 1, &rfds, &wfds, 0, &tv_left);
+        gettimeofday(&tv_now, 0);
+        if (timercmp(&tv_now, &tv_end, >)) {
+            break;
+        }
+        timersub(&tv_end, &tv_now, &tv_left);
+
         if (res == 0) {
             break;
         } else if (res < 0) {
