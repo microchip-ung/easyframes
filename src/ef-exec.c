@@ -60,6 +60,20 @@ int raw_socket(const char *name) {
         return -1;
     }
 
+    // Make sure that the socket is empty before started.
+    //
+    // Warning: I have no idea why this is needed, but otherwise I see that the
+    // test is failing on Ubuntu 18.04
+    //
+    // TODO: This does not seem to be needed, if we uses a RX ring buffer
+    // instead (atleast that seems to work for libpcap)
+    for (int i = 0; i < 10000; ++i) {
+        struct msghdr msg = { 0 };
+        int res = recvmsg(s, &msg, MSG_DONTWAIT);
+        if (res < 0)
+            break;
+    }
+
     return s;
 }
 
