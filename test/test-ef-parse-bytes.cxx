@@ -63,6 +63,7 @@ TEST_CASE("parse_bytes", "[parse_bytes]" ) {
     CHECK(hexstr(parse_bytes("10.1.2.3", 4)) == "0a010203");
     CHECK(hexstr(parse_bytes("10.1.2.8", 4)) == "0a010208");
     CHECK(hexstr(parse_bytes("10.0.99.2", 4)) == "0a006302");
+    CHECK(hexstr(parse_bytes("5.6.7.8", 4)) == "05060708");
 
     CHECK(!parse_bytes(":::", 6));
     CHECK(!parse_bytes("00::00::00", 6));

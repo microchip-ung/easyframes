@@ -59,6 +59,7 @@ buf_t *parse_bytes(const char *s, int bytes) {
     int i, has_other = 0;
     uint32_t start_mask = 0;
 
+    // printf("line: %d %s\n", __LINE__, s);
     for (i = 0; i < sizeof(start_withs)/sizeof(start_withs[0]); ++i) {
         int l = strlen(start_withs[i].s);
         if (s_size >= l && strncmp(s, start_withs[i].s, l) == 0) {
@@ -85,8 +86,7 @@ buf_t *parse_bytes(const char *s, int bytes) {
     }
 
     base = 0;
-    //printf("line: %d\n", __LINE__);
-    //printf("%08x %08x %d %d\n", start_mask, has_mask, has_other, bytes);
+    //printf("line: %d %08x %08x %d %d\n", __LINE__, start_mask, has_mask, has_other, bytes);
     if (start_mask == START_WITH_0x && !has_other &&
         ((has_mask & ~(HAS_BASE_2 | HAS_BASE_8 | HAS_BASE_10 | HAS_BASE_16)) == 0)) {
         //printf("line: %d\n", __LINE__);
@@ -106,7 +106,6 @@ buf_t *parse_bytes(const char *s, int bytes) {
                ((has_mask & ~(HAS_BASE_2)) == 0)) {
         //printf("line: %d\n", __LINE__);
         base = 2;
-
     }
 
     if (base && bytes <= 8) {
@@ -135,16 +134,16 @@ buf_t *parse_bytes(const char *s, int bytes) {
 
     //printf("line: %d %d %d\n", __LINE__, bytes, has_other);
     //printf("line: %d %d\n", __LINE__, has_mask & ~(HAS_HEX_COL));
-    //printf("line: %d %d\n", __LINE__, has_mask & HAS_COLON);
+    //printf("line: %d b2:  %d\n", __LINE__, has_mask & HAS_BASE_2);
+    //printf("line: %d b8:  %d\n", __LINE__, has_mask & HAS_BASE_8);
+    //printf("line: %d b10: %d\n", __LINE__, has_mask & HAS_BASE_10);
+    //printf("line: %d b16: %d\n", __LINE__, has_mask & HAS_BASE_16);
+    //printf("line: %d has colon: %d\n", __LINE__, has_mask & HAS_COLON);
+    //printf("line: %d has dot:   %d\n", __LINE__, has_mask & HAS_DOT);
+    //printf("line: %d has other:   %d\n", __LINE__, has_other);
 
-    if (start_mask == 0 && !has_other &&
-        ((has_mask & ~(HAS_BASE_2 | HAS_BASE_8)) ==
-         (HAS_BASE_10 | HAS_DOT))) {
-
-        //printf("line: %d\n", __LINE__);
-
-    } else if (start_mask == 0 && bytes == 4 && !has_other &&
-               ((has_mask & ~(HAS_HEX_DOT)) == 0) && (has_mask & HAS_DOT)) {
+    if (start_mask == 0 && bytes == 4 && !has_other &&
+        ((has_mask & ~(HAS_HEX_DOT)) == 0) && (has_mask & HAS_DOT)) {
         // This will be treated as an IPv4
         unsigned char buf[sizeof(struct in6_addr)];
         //printf("line: %d\n", __LINE__);
@@ -158,6 +157,8 @@ buf_t *parse_bytes(const char *s, int bytes) {
             return b;
 
         } else {
+            printf("%s:%d: ERROR, could not parse input as an IPv4 address\n",
+                   __FILE__, __LINE__);
             return 0;
         }
 
@@ -203,6 +204,7 @@ buf_t *parse_bytes(const char *s, int bytes) {
                 colon = 1;
 
             } else {
+                printf("%s:%d: ERROR\n", __FILE__, __LINE__);
                 return 0;
 
             }
@@ -210,8 +212,10 @@ buf_t *parse_bytes(const char *s, int bytes) {
             //printf("%d val:%x val_cnt:%d col_cnt:%d, idx:%d colon:%d\n",
             //       __LINE__, val, val_cnt, col_cnt, idx, colon);
 
-            if (idx > 5)
+            if (idx > 5) {
+                printf("%s:%d: ERROR\n", __FILE__, __LINE__);
                 return 0;
+            }
 
             if (colon) {
                 if (val_cnt != 0 && col_cnt == 0)
@@ -223,15 +227,19 @@ buf_t *parse_bytes(const char *s, int bytes) {
                 if (col_cnt == 2) {
                     split_cnt ++;
 
-                    if (split_cnt > 1)
+                    if (split_cnt > 1) {
+                        printf("%s:%d: ERROR\n", __FILE__, __LINE__);
                         return 0;
+                    }
 
                     if (split) {
+                        printf("%s:%d: ERROR\n", __FILE__, __LINE__);
                         return 0;
                     } else {
                         split = idx;
                     }
                 } else if (col_cnt > 2) {
+                    printf("%s:%d: ERROR\n", __FILE__, __LINE__);
                     return 0;
                 }
 
@@ -239,8 +247,10 @@ buf_t *parse_bytes(const char *s, int bytes) {
                 val_cnt ++;
                 col_cnt = 0;
 
-                if (val_cnt > 2)
+                if (val_cnt > 2) {
+                    printf("%s:%d: ERROR\n", __FILE__, __LINE__);
                     return 0;
+                }
 
                 if (val_cnt == 1)
                     element_cnt ++;
@@ -251,14 +261,20 @@ buf_t *parse_bytes(const char *s, int bytes) {
             }
         }
 
-        if (split_cnt > 1)
+        if (split_cnt > 1) {
+            printf("%s:%d: ERROR\n", __FILE__, __LINE__);
             return 0;
+        }
 
-        if (element_cnt > 6)
+        if (element_cnt > 6) {
+            printf("%s:%d: ERROR\n", __FILE__, __LINE__);
             return 0;
+        }
 
-        if (element_cnt >= 6 && split_cnt > 0)
+        if (element_cnt >= 6 && split_cnt > 0) {
+            printf("%s:%d: ERROR\n", __FILE__, __LINE__);
             return 0;
+        }
 
         move_from = split;
         move_to = 6 - element_cnt + split;
@@ -276,8 +292,10 @@ buf_t *parse_bytes(const char *s, int bytes) {
         //printf("%02x:%02x:%02x:%02x:%02x:%02x\n", m[0],  m[1], m[2], m[3], m[4], m[5]);
 
         b = balloc(6);
-        if (!b)
+        if (!b) {
+            printf("%s:%d: ERROR\n", __FILE__, __LINE__);
             return b;
+        }
         memcpy(b->data, m, 6);
 
         return b;
@@ -293,13 +311,16 @@ buf_t *parse_bytes(const char *s, int bytes) {
 
         if (inet_pton(AF_INET6, data_begin, buf) == 1) {
             b = balloc(16);
-            if (!b)
+            if (!b) {
+                printf("%s:%d: ERROR\n", __FILE__, __LINE__);
                 return b;
+            }
             memcpy(b->data, buf, 16);
 
             return b;
 
         } else {
+            printf("%s:%d: ERROR\n", __FILE__, __LINE__);
             return 0;
 
         }
