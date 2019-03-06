@@ -113,10 +113,10 @@ void print_help() {
     printf("\n");
     printf("FRAME-SPEC is a textual specification of a frame.\n");
     printf("Syntax: FRAME-SPEC ::= [HDR-NAME [<HDR-FIELD> <HDR-FIELD-VAL>]...]...\n");
-    printf("        HDR-NAME ::= eth|stag|ctag|arp|ip|udp\n");
+    printf("        HDR-NAME ::= eth|stag|ctag|arp|ipv4|udp\n");
     printf("\n");
     printf("Examples:\n");
-    printf("  ef tx eth0 eth dmac ::1 smac ::2 stag vid 0x100 ip da 1 udp\n");
+    printf("  ef tx eth0 eth dmac ::1 smac ::2 stag vid 0x100 ipv4 dip 1 udp\n");
     printf("\n");
     printf("  ef name f1 eth dmac ff:ff:ff:ff:ff:ff smac ::1\\\n");
     printf("     rx eth0 name f1\\\n");
