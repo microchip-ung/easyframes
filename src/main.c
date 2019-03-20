@@ -43,7 +43,7 @@ int argc_frame(int argc, const char *argv[], frame_t *f) {
 
         //printf("Parsing hdr: %s: %p\n", h->name, h);
         //printf("%d, i=%d/%d %s\n", __LINE__, i, argc, argv[i]);
-        res = h->parser(h, argc - i, argv + i);
+        res = h->parser(f, h, argc - i, argv + i);
         if (res < 0) {
             return res;
         }
@@ -67,6 +67,9 @@ void cmd_destruct(cmd_t *c) {
 
     if (c->frame_buf)
         bfree(c->frame_buf);
+
+    if (c->frame_mask_buf)
+        bfree(c->frame_mask_buf);
 
     memset(c, 0, sizeof(*c));
 }
@@ -121,6 +124,19 @@ void print_help() {
     printf("  ef name f1 eth dmac ff:ff:ff:ff:ff:ff smac ::1\\\n");
     printf("     rx eth0 name f1\\\n");
     printf("     tx eth1 name f1\n");
+    printf("\n");
+    printf("A complete header or a given field in a header can be ignored by\n");
+    printf("using the 'ign' or 'ignore' flag.\n");
+    printf("Example:\n");
+    printf("  To ignore the ipv4 header completly:\n");
+    printf("  ef hex eth dmac 1::2 smac 3::4 ipv4 ign udp\n");
+    printf("\n");
+    printf("  To ignore the ipv4 everything in the ipv4 header except the sip:\n");
+    printf("  ef hex eth dmac 1::2 smac 3::4 ipv4 ign sip 1.2.3.4 udp\n");
+    printf("\n");
+    printf("  To ignore the sip field in ipv4:\n");
+    printf("  ef hex eth dmac 1::2 smac 3::4 ipv4 sip ign udp\n");
+    printf("\n");
     printf("\n");
 }
 
@@ -204,6 +220,9 @@ int argc_cmd(int argc, const char *argv[], cmd_t *c) {
 
     if (c->frame) {
         c->frame_buf = frame_to_buf(c->frame);
+
+        if (c->frame->has_mask)
+            c->frame_mask_buf = frame_mask_to_buf(c->frame);
     }
 
     i += res;
@@ -248,7 +267,7 @@ int argc_cmds(int argc, const char *argv[]) {
 
 int TIME_OUT_MS = 100;
 
-int main(int argc, const char *argv[]) {
+int main_(int argc, const char *argv[]) {
     int opt;
 
     while ((opt = getopt(argc, (char * const*)argv, "ht:")) != -1) {

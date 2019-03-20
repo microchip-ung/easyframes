@@ -7,6 +7,7 @@ include_directories(src)
 
 add_library(libef STATIC
     src/ef.c
+    src/main.c  # TODO, rename to ef-args.c
     src/ef-parse-bytes.c
     src/ef-exec.c
     src/ef-buf.c
@@ -20,9 +21,11 @@ add_library(libef STATIC
     src/ef-igmp.c
     src/ef-udp.c
     src/ef-payload.c
+    src/ef-padding.c
 )
+target_link_libraries(libef pcap)
 
-add_executable(ef src/main.c)
+add_executable(ef src/mainmain.c) # todo, rename to main.c
 target_link_libraries(ef libef pcap)
 
 add_executable(er src/er.c)
@@ -34,7 +37,13 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-add_executable(ef-tests test/ef-tests.cxx test/test-ef-parse-bytes.cxx)
+add_executable(ef-tests
+    test/ef-test.cxx
+    test/ef-tests.cxx
+    test/test-ef-parse-bytes.cxx
+    test/ifh-ignore.cxx
+)
+
 target_link_libraries(ef-tests libef)
 
 include(CTest)

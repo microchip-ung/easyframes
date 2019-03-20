@@ -21,6 +21,34 @@ def ok cmd, expect
     #raise "Command './ef hex #{cmd}' exitted with #{$?.to_i}, expected 0" if $?.to_i != 0
 end
 
+def ok_mask cmd, expect, expect_mask
+    actual = %x[./ef hex #{cmd}]
+    actual.chomp!
+    a = actual.split "\n"
+
+    raise "Command './ef hex #{cmd}' exitted with #{$?.to_i}, expected 0" if $?.to_i != 0
+
+    if a[0] != "DATA: #{expect}"
+        puts "Expected: DATA: #{expect}"
+        puts "Actual:   #{a[0]}"
+        raise "Wrong output: #{cmd}"
+    end
+
+    if a[1] != "MASK: #{expect_mask}"
+        puts "Expected: MASK: #{expect_mask}"
+        puts "Actual:   #{a[1]}"
+        raise "Wrong output: #{cmd}"
+    end
+
+    %x[./ef pcap ./out.pcap #{cmd}]
+    raise "Command './ef pcap #{cmd}' exitted with #{$?.to_i}, expected 0" if $?.to_i != 0
+
+    puts "OK: #{cmd}"
+
+    #%x[valgrind ./ef hex #{cmd}]
+    #raise "Command './ef hex #{cmd}' exitted with #{$?.to_i}, expected 0" if $?.to_i != 0
+end
+
 %x{rm -f "./out.pcap"}
 ok("eth", "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000");
 ok("eth dmac 0:1::2 smac 123", "00010000000200000000007b000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000");
@@ -212,3 +240,15 @@ ok("eth ipv4 tcp sport 0xaaaa dport 0xbbbb data ascii \"Hello World!\"",
    "000000000000000000000000080045000034000000001f069bc50000000000000000aaaabbbb000000000000000050000000f783000048656c6c6f20576f726c6421");
 ok("eth ipv6 tcp sport 0xaaaa dport 0xbbbb data ascii \"Hello World!\"",
 "00000000000000000000000086dd600000000020061f0000000000000000000000000000000000000000000000000000000000000000aaaabbbb000000000000000050000000f783000048656c6c6f20576f726c6421");
+
+# Testing ignore masks
+ok_mask("eth dmac 1::2 smac 3::4 ipv4 ign udp",
+        "01000000000203000000000408004500001c000000001f119bd20000000000000000000000000008ffde000000000000000000000000000000000000",
+        "ffffffffffffffffffffffffffff0000000000000000000000000000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffff")
+ok_mask("eth dmac 1::2 smac 3::4 ipv4 ign sip 1.2.3.4 udp",
+        "01000000000203000000000408004500001c000000001f1197cc0102030400000000000000000008fbd8000000000000000000000000000000000000",
+        "ffffffffffffffffffffffffffff000000000000000000000000ffffffff00000000ffffffffffffffffffffffffffffffffffffffffffffffffffff")
+ok_mask("eth dmac 1::2 smac 3::4 ipv4 sip ign udp",
+        "01000000000203000000000408004500001c000000001f119bd20000000000000000000000000008ffde000000000000000000000000000000000000",
+        "ffffffffffffffffffffffffffffffffffffffffffffffffffff00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+

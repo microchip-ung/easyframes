@@ -1,36 +1,7 @@
 #include "ef.h"
+#include "ef-test.h"
 
-#include <vector>
 #include "catch_single_include.hxx"
-
-struct HexBuf {
-    HexBuf(int _s, const char *_d) : s(_s), d(_d) { }
-
-    int s;
-    std::string d;
-};
-
-std::string hexstr(buf_t *b) {
-    char bb[8];
-    std::string s;
-
-    if (!b)
-        return "<NULL>";
-
-    for (size_t i = 0; i < b->size; ++i) {
-        snprintf(bb, 8, "%02x", b->data[i]);
-        s.append(bb);
-    }
-
-    bfree(b);
-
-    return s;
-}
-
-std::ostream& operator<<(std::ostream& o, const HexBuf &b) {
-    o << b.d;
-    return o;
-}
 
 //std::ostream& operator<<(std::ostream& o, const buf_t &b) {
 //    o << hexstr(b);
@@ -125,15 +96,16 @@ TEST_CASE("parse_bytes", "[parse_bytes]" ) {
 }
 
 TEST_CASE("hdr_write_field", "[hdr_write_field]" ) {
-#define X(VAL_SIZE, VAL, WIDTH, OFFSET, OUT_SIZE, OUT)                                    \
-    {                                                                                     \
-        buf_t *b1 = balloc(OUT_SIZE);                                                     \
-        buf_t *b2 = parse_bytes(VAL, VAL_SIZE);                                           \
-        field_t f = { .name = "", .help = "", .bit_width = WIDTH, .bit_offset = OFFSET }; \
-        hdr_write_field(b1, 0, &f, b2);                                                   \
-                                                                                          \
-        CHECK(hexstr(b1) == OUT);                                                         \
-        bfree(b2);                                                                        \
+#define X(VAL_SIZE, VAL, WIDTH, OFFSET, OUT_SIZE, OUT)            \
+    {                                                             \
+        buf_t *b1 = balloc(OUT_SIZE);                             \
+        buf_t *b2 = parse_bytes(VAL, VAL_SIZE);                   \
+        field_t f = { .name = "", .help = "", .rx_match_skip = 0, \
+                      .bit_width = WIDTH, .bit_offset = OFFSET }; \
+        hdr_write_field(b1, 0, &f, b2);                           \
+                                                                  \
+        CHECK(hexstr(b1) == OUT);                                 \
+        bfree(b2);                                                \
     }
 
     /*
@@ -332,8 +304,10 @@ TEST_CASE("hdr_write_field", "[hdr_write_field]" ) {
     buf_t *b1 = balloc(10);
     buf_t *b2 = parse_bytes("0x4", 1);
     buf_t *b3 = parse_bytes("0x5", 1);
-    field_t f1 = { .name = "", .help = "", .bit_width = 4, .bit_offset = 0};
-    field_t f2 = { .name = "", .help = "", .bit_width = 4, .bit_offset = 4};
+    field_t f1 = { .name = "", .help = "", .rx_match_skip = 0,
+                   .bit_width = 4, .bit_offset = 0};
+    field_t f2 = { .name = "", .help = "", .rx_match_skip = 0,
+                   .bit_width = 4, .bit_offset = 4};
     hdr_write_field(b1, 0, &f1, b2);
     hdr_write_field(b1, 0, &f2, b3);
     CHECK(hexstr(b1) == "45000000000000000000");
@@ -374,6 +348,7 @@ TEST_CASE("parse_var_bytes", "[parse_var_bytes]" ) {
         char b2[10000];
         memset(b2, 0xab, 10000);
         CHECK(memcmp(b1->data, b2, 10000) == 0);
+        bfree(b1);
     }
 
     X("000102030405060708090a0b0c0d0e0f10111213", "pattern", "cnt", "20");

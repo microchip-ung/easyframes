@@ -52,6 +52,44 @@ int bequal(const buf_t *a, const buf_t *b) {
     return memcmp(a->data, b->data, a->size) == 0;
 }
 
+int bequal_mask(const buf_t *rx_frame, const buf_t *expected_frame,
+                const buf_t *mask, int padding) {
+    int i = 0;
+
+    if ((rx_frame && !expected_frame) || (!rx_frame && expected_frame))
+        return 0;
+
+    if (!rx_frame && !expected_frame)
+        return 1;
+
+    if (padding < 0)
+        return 0;
+
+    if (rx_frame->size != expected_frame->size + padding)
+        return 0;
+
+    if (mask == 0)
+        return memcmp(rx_frame->data, expected_frame->data, rx_frame->size) == 0;
+
+    // Notice, rx_frame->size may be smaller than expected_frame->size
+    for (i = 0; i < rx_frame->size; ++i) {
+        unsigned char a_, b_, m_;
+        a_ = rx_frame->data[i];
+        b_ = expected_frame->data[i];
+        if (i >= mask->size) {
+            m_ = 0xff;
+        } else {
+            m_ = mask->data[i];
+        }
+
+        if ((a_ & m_) != (b_ & m_)) {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
 void ble_free(buf_list_element_t *b) {
     if (!b)
         return;

@@ -230,7 +230,8 @@ int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
                 if (cmd_ptr->done)
                     continue;
 
-                if (bequal(b, cmd_ptr->frame_buf)) {
+                if (bequal_mask(b, cmd_ptr->frame_buf, cmd_ptr->frame_mask_buf,
+                                cmd_ptr->frame->padding_len)) {
                     match = 1;
                     cmd_ptr->done = 1;
                     break;
@@ -243,6 +244,12 @@ int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
                     dprintf(1, "name %s", resources[i].cmd->name);
                 } else {
                     print_hex_str(1, b->data, res);
+                    if (resources[i].cmd->frame_mask_buf) {
+                        dprintf(2, "RX-OK MASK:              ");
+                        print_hex_str(2, resources[i].cmd->frame_mask_buf->data,
+                                      resources[i].cmd->frame_mask_buf->size);
+                        dprintf(2, "\n");
+                    }
                 }
                 dprintf(1, "\n");
             } else {
@@ -361,6 +368,13 @@ int exec_cmds(int cnt, cmd_t *cmds) {
             dprintf(1, "NAME:  %16s: ", cmds[i].name);
             print_hex_str(1, cmds[i].frame_buf->data, cmds[i].frame_buf->size);
             dprintf(1, "\n");
+
+            if (cmds[i].frame_mask_buf) {
+                dprintf(2, "NAME MASK:               ");
+                print_hex_str(2, cmds[i].frame_mask_buf->data,
+                              cmds[i].frame_mask_buf->size);
+                dprintf(2, "\n");
+            }
         }
     }
 
@@ -397,7 +411,14 @@ int exec_cmds(int cnt, cmd_t *cmds) {
         if (cmds[i].type != CMD_TYPE_HEX)
             continue;
 
-        if (cmds[i].frame_buf) {
+        if (cmds[i].frame_mask_buf && cmds[i].frame_buf) {
+            dprintf(1, "DATA: ");
+            print_hex_str(1, cmds[i].frame_buf->data, cmds[i].frame_buf->size);
+            dprintf(1, "\nMASK: ");
+            print_hex_str(1, cmds[i].frame_mask_buf->data,
+                          cmds[i].frame_buf->size);
+            dprintf(1, "\n");
+        } else if (cmds[i].frame_buf) {
             print_hex_str(1, cmds[i].frame_buf->data, cmds[i].frame_buf->size);
             dprintf(1, "\n");
         }
@@ -481,6 +502,13 @@ int exec_cmds(int cnt, cmd_t *cmds) {
             } else {
                 print_hex_str(2, cmd_ptr->frame_buf->data,
                               cmd_ptr->frame_buf->size);
+                dprintf(2, "\n");
+                if (cmd_ptr->frame_mask_buf) {
+                    dprintf(2, "NO-RX MASK:              ");
+                    print_hex_str(2, cmd_ptr->frame_mask_buf->data,
+                                  cmd_ptr->frame_mask_buf->size);
+                    dprintf(2, "\n");
+                }
             }
 
             dprintf(2, "\n");

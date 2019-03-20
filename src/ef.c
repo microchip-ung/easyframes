@@ -308,9 +308,10 @@ hdr_t *frame_clone_and_push_hdr(frame_t *f, hdr_t *h) {
     return new_hdr;
 }
 
-int hdr_parse_fields(hdr_t *hdr, int argc, const char *argv[]) {
-    int i;
+int hdr_parse_fields(frame_t *frame, hdr_t *hdr, int argc, const char *argv[]) {
+    int i, j;
     field_t *f;
+    int field_ignore = 0;
 
     for (i = 0; i < argc; ++i) {
         if (strcmp(argv[i], "help") == 0) {
@@ -318,10 +319,28 @@ int hdr_parse_fields(hdr_t *hdr, int argc, const char *argv[]) {
             return -1;
         }
 
+        // If "ign" flag is set as the first argument in a header, then all
+        // fields should be ignored by default
+        if ((strcmp(argv[i], "ign") == 0 || strcmp(argv[i], "ignore") == 0) &&
+            i == 0) {
+
+            for (j = 0; j < hdr->fields_size; ++j)
+                hdr->fields[j].rx_match_skip = 1;
+
+            frame->has_mask = 1;
+            continue;
+        }
+
         f = find_field(hdr, argv[i]);
 
         if (!f)
             return i;
+
+        if (field_ignore) {
+            field_ignore = 0;
+            f->rx_match_skip = 1;
+            continue;
+        }
 
         i += 1;
 
@@ -331,6 +350,12 @@ int hdr_parse_fields(hdr_t *hdr, int argc, const char *argv[]) {
             return -1;
         }
 
+        if (strcmp(argv[i], "ign") == 0 || strcmp(argv[i], "ignore") == 0) {
+            frame->has_mask = 1;
+            f->rx_match_skip = 1;
+            continue;
+        }
+
         if (strcmp(argv[i], "help") == 0) {
             field_help(f, 0);
             return -1;
@@ -338,21 +363,25 @@ int hdr_parse_fields(hdr_t *hdr, int argc, const char *argv[]) {
 
         //printf("Assigned value for %s\n", f->name);
         f->val = parse_bytes(argv[i], BIT_TO_BYTE(f->bit_width));
+        f->rx_match_skip = 0;
     }
 
     return i;
 }
 
-int hdr_copy_to_buf(hdr_t *hdr, int offset, buf_t *buf) {
+static int hdr_copy_to_buf_(hdr_t *hdr, int offset, buf_t *buf, int mask) {
     int i;
-    buf_t *v;
-    field_t *f;
+    buf_t *v = 0;
+    field_t *f = 0;
+    buf_t *maskb = 0;
+
 
     for (i = 0, f = hdr->fields; i < hdr->fields_size; ++i, ++f) {
         if (BIT_TO_BYTE(f->bit_width) + offset > buf->size) {
             //printf("Buf over flow\n");
             return -1;
         }
+
 
         if (f->val) {
             //printf("val %s\n", f->name);
@@ -364,12 +393,35 @@ int hdr_copy_to_buf(hdr_t *hdr, int offset, buf_t *buf) {
             v = 0;
         }
 
+        if (mask)
+            v = 0;
+
+        if (mask && !f->rx_match_skip) {
+            maskb = balloc(BIT_TO_BYTE(f->bit_width));
+            memset(maskb->data, 0xff, maskb->size);
+            v = maskb;
+        }
+
         if (v)
             hdr_write_field(buf, offset, f, v);
+
+        if (maskb) {
+            bfree(maskb);
+            maskb = 0;
+        }
     }
 
     return i;
 }
+
+int hdr_copy_to_buf_mask(hdr_t *hdr, int offset, buf_t *buf) {
+    return hdr_copy_to_buf_(hdr, offset, buf, 1);
+}
+
+int hdr_copy_to_buf(hdr_t *hdr, int offset, buf_t *buf) {
+    return hdr_copy_to_buf_(hdr, offset, buf, 0);
+}
+
 
 buf_t *frame_to_buf(frame_t *f) {
     int i;
@@ -385,8 +437,6 @@ buf_t *frame_to_buf(frame_t *f) {
     if (frame_size < 60)
         frame_size = 60;
 
-    f->buf_size = frame_size;
-
     for (i = f->stack_size - 1; i >= 0; --i)
         if (f->stack[i]->frame_fill_defaults)
             f->stack[i]->frame_fill_defaults(f, i);
@@ -395,6 +445,35 @@ buf_t *frame_to_buf(frame_t *f) {
 
     for (i = 0; i < f->stack_size; ++i) {
         hdr_copy_to_buf(f->stack[i], offset, buf);
+        offset += f->stack[i]->size;
+    }
+
+    return buf;
+}
+
+buf_t *frame_mask_to_buf(frame_t *f) {
+    int i;
+    buf_t *buf;
+    int frame_size = 0, offset = 0;
+    int frame_size_no_padding;
+
+    for (i = 0; i < f->stack_size; ++i) {
+        f->stack[i]->offset_in_frame = frame_size;
+        frame_size += f->stack[i]->size;
+    }
+
+    frame_size_no_padding = frame_size;
+    if (frame_size < 60)
+        frame_size = 60;
+
+    buf = balloc(frame_size);
+    if (frame_size > frame_size_no_padding) {
+        memset(buf->data + frame_size_no_padding, 0xff,
+               buf->size - frame_size_no_padding);
+    }
+
+    for (i = 0; i < f->stack_size; ++i) {
+        hdr_copy_to_buf_mask(f->stack[i], offset, buf);
         offset += f->stack[i]->size;
     }
 
@@ -468,6 +547,7 @@ void icmp_init();
 void igmp_init();
 void udp_init();
 void payload_init();
+void padding_init();
 
 void init() __attribute__ ((constructor));
 void init() {
@@ -481,6 +561,7 @@ void init() {
     igmp_init();
     udp_init();
     payload_init();
+    padding_init();
 }
 
 void ifh_uninit();
@@ -493,6 +574,7 @@ void icmp_uninit();
 void igmp_uninit();
 void udp_uninit();
 void payload_uninit();
+void padding_uninit();
 
 void uninit() __attribute__ ((destructor));
 void uninit() {
@@ -506,5 +588,6 @@ void uninit() {
     igmp_uninit();
     udp_uninit();
     payload_uninit();
+    padding_uninit();
 }
 

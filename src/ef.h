@@ -1,3 +1,7 @@
+
+#ifndef EF_H
+#define EF_H
+
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
@@ -21,6 +25,8 @@ void bfree(buf_t *b);
 buf_t *balloc(size_t size);
 buf_t *bclone(const buf_t *b);
 int bequal(const buf_t *a, const buf_t *b);
+int bequal_mask(const buf_t *rx_frame, const buf_t *expected_frame,
+                const buf_t *mask, int padding);
 
 typedef struct buf_list_element {
     struct buf_list_element *next;
@@ -46,6 +52,8 @@ typedef struct {
 void bl_check(buf_list_t *b);
 
 void bl_reset(buf_list_t *b);
+void bset_value( buf_t *b, uint8_t v);
+
 inline void bl_init(buf_list_t *b) { bl_reset(b); }
 inline void bl_destroy(buf_list_t *b) { bl_reset(b); }
 
@@ -82,11 +90,12 @@ struct frame;
 typedef int (*frame_fill_defaults_t)(struct frame *, int stack_idx);
 
 struct hdr;
-typedef int (*hdr_parse_t)(struct hdr *hdr, int argc, const char *argv[]);
+typedef int (*hdr_parse_t)(struct frame *frame, struct hdr *hdr, int argc, const char *argv[]);
 
 typedef struct {
     const char *name;
     const char *help;
+    int         rx_match_skip;
     int         bit_width;
     int         bit_offset;
     buf_t      *def;
@@ -121,7 +130,8 @@ typedef struct frame {
 #define FRAME_STACK_MAX 100
     hdr_t *stack[FRAME_STACK_MAX];
     int    stack_size;
-    int    buf_size;
+    int    padding_len;
+    int    has_mask;
 } frame_t;
 
 int frame_copy(frame_t *dst, const frame_t *src);
@@ -141,9 +151,11 @@ void frame_reset(frame_t *f);
 hdr_t *frame_clone_and_push_hdr(frame_t *f, hdr_t *h);
 
 int hdr_copy_to_buf(hdr_t *hdr, int offset, buf_t *buf);
-int hdr_parse_fields(hdr_t *hdr, int argc, const char *argv[]);
+int hdr_copy_to_buf_mask(hdr_t *hdr, int offset, buf_t *buf);
+int hdr_parse_fields(frame_t *f, hdr_t *hdr, int argc, const char *argv[]);
 
 buf_t *frame_to_buf(frame_t *f);
+buf_t *frame_mask_to_buf(frame_t *f);
 
 void init_frame_data_all();
 void uninit_frame_data_all();
@@ -176,6 +188,7 @@ typedef enum {
     HDR_TMPL_UDP,
     HDR_TMPL_TCP,
     HDR_TMPL_PAYLOAD,
+    HDR_TMPL_PADDING,
 
     HDR_TMPL_SIZE,
 } hdr_tmpl_t;
@@ -199,6 +212,7 @@ typedef struct cmd {
     char       *arg0;
     frame_t    *frame;
     buf_t      *frame_buf;
+    buf_t      *frame_mask_buf;
     int         done;
 } cmd_t;
 
@@ -214,6 +228,15 @@ int exec_cmds(int cnt, cmd_t *cmds);
 
 void print_hex_str(int fd, void *_d, int s);
 
+int argc_frame(int argc, const char *argv[], frame_t *f);
+void cmd_destruct(cmd_t *c);
+
+void print_help();
+int argc_cmds(int argc, const char *argv[]);
+int main_(int argc, const char *argv[]);
+
 #ifdef __cplusplus
 }
 #endif
+
+#endif // EF_H

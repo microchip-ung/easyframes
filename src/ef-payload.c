@@ -1,6 +1,6 @@
 #include "ef.h"
 
-static int payload_parser(hdr_t *hdr, int argc, const char *argv[]) {
+static int payload_parser(frame_t *frame, hdr_t *hdr, int argc, const char *argv[]) {
     int res;
     buf_t *b = 0;
 
