@@ -407,6 +407,34 @@ buf_t *parse_var_bytes_hex(const char *s) {
     return b;
 }
 
+buf_t *parse_field_hex(const char *s, int bytes)
+{
+    buf_t *b;
+    buf_t *b_ret = 0;
+
+    b_ret = balloc(bytes);
+    if (!b_ret) {
+        printf("%s:%d: ERROR: Memory alloc\n", __FILE__, __LINE__);
+        return 0;
+    }
+    b = parse_var_bytes_hex(s);
+    if (!b) {
+        bfree(b_ret);
+        return 0;
+    }
+
+    if (b->size > bytes) {
+        printf("%s:%d: ERROR: Parsed field size is too large\n", __FILE__, __LINE__);
+        return 0;
+    }
+
+    memset(b_ret->data, 0, sizeof(bytes));
+    memcpy(b_ret->data, b->data, b->size);
+    bfree(b);
+
+    return(b_ret);
+}
+
 buf_t *parse_var_bytes_ascii(const char *s) {
     buf_t *b;
     b = balloc(strlen(s));

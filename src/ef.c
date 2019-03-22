@@ -362,7 +362,11 @@ int hdr_parse_fields(frame_t *frame, hdr_t *hdr, int argc, const char *argv[]) {
         }
 
         //printf("Assigned value for %s\n", f->name);
-        f->val = parse_bytes(argv[i], BIT_TO_BYTE(f->bit_width));
+        if (f->parser != NULL) {
+            f->val = f->parser(argv[i], BIT_TO_BYTE(f->bit_width));
+        } else {
+            f->val = parse_bytes(argv[i], BIT_TO_BYTE(f->bit_width));
+        }
         f->rx_match_skip = 0;
     }
 
@@ -548,6 +552,7 @@ void igmp_init();
 void udp_init();
 void payload_init();
 void padding_init();
+void oam_init();
 
 void init() __attribute__ ((constructor));
 void init() {
@@ -562,6 +567,7 @@ void init() {
     udp_init();
     payload_init();
     padding_init();
+    oam_init();
 }
 
 void ifh_uninit();
@@ -575,6 +581,7 @@ void igmp_uninit();
 void udp_uninit();
 void payload_uninit();
 void padding_uninit();
+void oam_uninit();
 
 void uninit() __attribute__ ((destructor));
 void uninit() {
@@ -589,5 +596,6 @@ void uninit() {
     udp_uninit();
     payload_uninit();
     padding_uninit();
+    oam_uninit();
 }
 

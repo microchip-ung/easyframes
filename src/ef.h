@@ -91,6 +91,7 @@ typedef int (*frame_fill_defaults_t)(struct frame *, int stack_idx);
 
 struct hdr;
 typedef int (*hdr_parse_t)(struct frame *frame, struct hdr *hdr, int argc, const char *argv[]);
+typedef buf_t *(*field_parse_t)(const char *s, int bytes);
 
 typedef struct {
     const char *name;
@@ -100,6 +101,8 @@ typedef struct {
     int         bit_offset;
     buf_t      *def;
     buf_t      *val;
+
+    field_parse_t parser;
 } field_t;
 
 int field_copy(field_t *dst, const field_t *src);
@@ -139,6 +142,7 @@ void frame_destruct(frame_t *f);
 GEN_ALLOC_CLONE_FREE(frame);
 
 buf_t *parse_bytes(const char *s, int bytes);
+buf_t *parse_field_hex(const char *s, int bytes);
 int parse_uint8(const char *s, uint8_t *o);
 int parse_uint32(const char *s, uint32_t *o);
 int parse_var_bytes(buf_t **b, int argc, const char *argv[]);
@@ -189,6 +193,11 @@ typedef enum {
     HDR_TMPL_TCP,
     HDR_TMPL_PAYLOAD,
     HDR_TMPL_PADDING,
+    HDR_TMPL_OAM_CCM,
+    HDR_TMPL_OAM_LAPS,
+    HDR_TMPL_OAM_LB,
+    HDR_TMPL_OAM_LT,
+    HDR_TMPL_OAM_RAPS,
 
     HDR_TMPL_SIZE,
 } hdr_tmpl_t;

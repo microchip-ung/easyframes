@@ -245,10 +245,10 @@ int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
                 } else {
                     print_hex_str(1, b->data, b->size);
                     if (resources[i].cmd->frame_mask_buf) {
-                        dprintf(2, "RX-OK MASK:              ");
-                        print_hex_str(2, resources[i].cmd->frame_mask_buf->data,
+                        dprintf(1, "RX-OK MASK:              ");
+                        print_hex_str(1, resources[i].cmd->frame_mask_buf->data,
                                       resources[i].cmd->frame_mask_buf->size);
-                        dprintf(2, "\n");
+                        dprintf(1, "\n");
                     }
                 }
                 dprintf(1, "\n");
@@ -373,10 +373,10 @@ int exec_cmds(int cnt, cmd_t *cmds) {
             dprintf(1, "\n");
 
             if (cmds[i].frame_mask_buf) {
-                dprintf(2, "NAME MASK:               ");
-                print_hex_str(2, cmds[i].frame_mask_buf->data,
+                dprintf(1, "NAME MASK:               ");
+                print_hex_str(1, cmds[i].frame_mask_buf->data,
                               cmds[i].frame_mask_buf->size);
-                dprintf(2, "\n");
+                dprintf(1, "\n");
             }
         }
     }
