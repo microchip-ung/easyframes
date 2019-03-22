@@ -243,7 +243,7 @@ int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
                 if (resources[i].cmd->name) {
                     dprintf(1, "name %s", resources[i].cmd->name);
                 } else {
-                    print_hex_str(1, b->data, res);
+                    print_hex_str(1, b->data, b->size);
                     if (resources[i].cmd->frame_mask_buf) {
                         dprintf(2, "RX-OK MASK:              ");
                         print_hex_str(2, resources[i].cmd->frame_mask_buf->data,
@@ -255,7 +255,7 @@ int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
             } else {
                 resources[i].rx_err_cnt ++;
                 dprintf(2, "RX-ERR %16s: ", resources[i].cmd->arg0);
-                print_hex_str(2, b->data, res);
+                print_hex_str(2, b->data, b->size);
                 dprintf(2, "\n");
             }
 
@@ -297,7 +297,7 @@ int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
     return 0;
 }
 
-buf_t *frame_by_name(const char *name, int cnt, cmd_t *cmds) {
+static int copy_cmd_by_name(const char *name, int cnt, cmd_t *cmds, cmd_t *dst) {
     int i;
 
     for (i = 0; i < cnt; i++) {
@@ -310,10 +310,13 @@ buf_t *frame_by_name(const char *name, int cnt, cmd_t *cmds) {
         if (strcmp(cmds[i].name, name) != 0)
             continue;
 
-        return bclone(cmds[i].frame_buf);
+        dst->frame = frame_clone(cmds[i].frame);
+        dst->frame_buf = bclone(cmds[i].frame_buf);
+        dst->frame_mask_buf = bclone(cmds[i].frame_mask_buf);
+        return 0;
     }
 
-    return 0;
+    return -1;
 }
 
 int pcap_append(cmd_t *c) {
@@ -389,8 +392,7 @@ int exec_cmds(int cnt, cmd_t *cmds) {
         if (cmds[i].frame_buf)
             continue;
 
-        cmds[i].frame_buf = frame_by_name(cmds[i].name, cnt, cmds);
-        if (!cmds[i].frame_buf) {
+        if (copy_cmd_by_name(cmds[i].name, cnt, cmds, &cmds[i]) != 0) {
             dprintf(2, "No frame in inventory called %s\n", cmds[i].name);
             err ++;
         }
