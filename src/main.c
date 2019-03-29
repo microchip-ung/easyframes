@@ -137,6 +137,13 @@ void print_help() {
     printf("  To ignore the sip field in ipv4:\n");
     printf("  ef hex eth dmac 1::2 smac 3::4 ipv4 sip ign udp\n");
     printf("\n");
+    printf("A frame can be repeated to utilize up to line speed bandwith (>512 byte frames)\n");
+    printf("using the 'rep' or 'repeat' flag.\n");
+    printf("Example:\n");
+    printf("   Send a frame 1 million times:\n");
+    printf("   ef tx eth0 rep 1000000 eth dmac ::1 smac ::2\n");
+    printf("   Note that the repeat flag must follow the tx <interface> key-word\n");
+    printf("   Results must be viewed through the PC or DUT interface counters, i.e. outside of 'ef'\n");
     printf("\n");
 }
 
@@ -169,7 +176,7 @@ int argc_cmd(int argc, const char *argv[], cmd_t *c) {
     if (i >= argc)
         return 0;
 
-    //printf("%d, i=%d/%d %s\n", __LINE__, i, argc, argv[i]);
+//    printf("%d, i=%d/%d %s\n", __LINE__, i, argc, argv[i]);
     switch (c->type) {
         case CMD_TYPE_NAME:
             c->name = strdup(argv[i]);
@@ -188,6 +195,14 @@ int argc_cmd(int argc, const char *argv[], cmd_t *c) {
 
         default:
             ;
+    }
+
+    if (c->type == CMD_TYPE_TX) {
+        c->repeat = 1;
+        if (strcmp(argv[i], "rep") == 0 || strcmp(argv[i], "repeat") == 0) {
+            c->repeat = atoi(argv[i+1]);
+            i += 2;
+        }
     }
 
     //printf("%d, i=%d/%d %s\n", __LINE__, i, argc, argv[i]);

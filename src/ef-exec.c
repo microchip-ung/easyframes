@@ -167,7 +167,7 @@ int rfds_wfds_fill(cmd_socket_t *resources, int res_valid, fd_set *rfds,
 
 int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
                       fd_set *wfds) {
-    int i, res, match, old_size;
+    int i, res, match, old_size, tx_done;
     buf_t *b;
     cmd_t *cmd_ptr;
 
@@ -264,34 +264,43 @@ int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
         bfree(b);
     }
 
-    for (i = 0; i < res_valid; i++) {
-        if (!FD_ISSET(resources[i].fd, wfds))
-            continue;
-
-        // TX the first not "done" frame.
-        for (cmd_ptr = resources[i].cmd; cmd_ptr; cmd_ptr = cmd_ptr->next) {
-            if (cmd_ptr->type != CMD_TYPE_TX)
+    while(1) {
+        tx_done = 1;
+        for (i = 0; i < res_valid; i++) {
+            if (!FD_ISSET(resources[i].fd, wfds))
                 continue;
 
-            if (cmd_ptr->done)
-                continue;
+            // TX the first not "done" frame.
+            for (cmd_ptr = resources[i].cmd; cmd_ptr; cmd_ptr = cmd_ptr->next) {
+                if (cmd_ptr->type != CMD_TYPE_TX)
+                    continue;
 
-            b = cmd_ptr->frame_buf;
-            res = send(resources[i].fd, b->data, b->size, 0);
-            if (res == b->size) {
-                dprintf(1, "TX     %16s: ", cmd_ptr->arg0);
-                if (cmd_ptr->name) {
-                    dprintf(1, "name %s", cmd_ptr->name);
-                } else {
-                    print_hex_str(1, b->data, b->size);
+                if (cmd_ptr->done)
+                    continue;
+
+                b = cmd_ptr->frame_buf;
+                res = send(resources[i].fd, b->data, b->size, 0);
+                cmd_ptr->repeat--;
+
+                if (cmd_ptr->repeat > 0) {
+                    tx_done = 0;
                 }
-                dprintf(1, "\n");
 
-                cmd_ptr->done = 1;
+                if (res == b->size && cmd_ptr->repeat == 0) {
+                    dprintf(1, "TX     %16s: ", cmd_ptr->arg0);
+                    if (cmd_ptr->name) {
+                        dprintf(1, "name %s", cmd_ptr->name);
+                    } else {
+                        print_hex_str(1, b->data, b->size);
+                    }
+                    dprintf(1, "\n");
+                    cmd_ptr->done = 1;
+                }
+                break;
             }
-
-            break;
         }
+        if (tx_done > 0)
+            break;
     }
 
     return 0;

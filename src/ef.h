@@ -223,6 +223,7 @@ typedef struct cmd {
     buf_t      *frame_buf;
     buf_t      *frame_mask_buf;
     int         done;
+    uint32_t    repeat;
 } cmd_t;
 
 typedef struct {

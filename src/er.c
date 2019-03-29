@@ -52,8 +52,8 @@ struct timespec start_time;
 
 #define PREFIX_SIZE     40
 #define POSTFIX_SIZE    10
-#define LINE_SIZE_MAX 1000
-#define BUF_SIZE      (2048)
+#define LINE_SIZE_MAX 10000
+#define BUF_SIZE      (20480)
 
 #ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
