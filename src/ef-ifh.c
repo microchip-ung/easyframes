@@ -649,6 +649,106 @@ static hdr_t HDR_IFH_JR2 = {
     .parser = hdr_parse_fields,
 };
 
+static field_t IFH_CRCL_FIELDS[] = {
+    { .name = "bypass",
+      .help = "Skip analyzer processing",
+      .bit_width =  1 },
+    { .name = "ptp",
+      .help = "PTP action",
+      .bit_width =  2 },
+    { .name = "ptp-id",
+      .help = "PTP ID",
+      .bit_width =  2 },
+    { .name = "dest",
+      .help = "Destination port set",
+      .bit_width =  27 },
+    { .name = "resv",
+      .help = "Reserved field",
+      .bit_width =  2 },
+    { .name = "pop-cnt",
+      .help = "VLAN tag pop count",
+      .bit_width =  2 },
+    { .name = "cpuq",
+      .help = "CPU extraction queue mask",
+      .bit_width =   8 },
+    { .name = "qos-class",
+      .help = "Classified QoS class",
+      .bit_width =   3 },
+    { .name = "tag-type",
+      .help = "C-tag (0) or S-tag (1)",
+      .bit_width =   1 },
+    { .name = "pcp",
+      .help = "Classified PCP",
+      .bit_width =   3 },
+    { .name = "dei",
+      .help = "Classified DEI",
+      .bit_width =   1 },
+    { .name = "vid",
+      .help = "Classified VID",
+      .bit_width =  12 },
+};
+
+static hdr_t HDR_IFH_CRCL = {
+    .name = "ifh-crcl",
+    .help = "Injection Frame Header for Caracal",
+    .fields = IFH_CRCL_FIELDS,
+    .fields_size = sizeof(IFH_CRCL_FIELDS) / sizeof(IFH_CRCL_FIELDS[0]),
+    .parser = hdr_parse_fields,
+};
+
+static field_t EFH_CRCL_FIELDS[] = {
+    { .name = "signature",
+      .help = "Must be 0xff",
+      .bit_width =  8 },
+    { .name = "src-port",
+      .help = "Source port",
+      .bit_width =  5 },
+    { .name = "dscp",
+      .help = "Classified DSCP",
+      .bit_width =  6 },
+    { .name = "acl-id",
+      .help = "ACL ID",
+      .bit_width =  8 },
+    { .name = "sflow-id",
+      .help = "SFlow sampling ID",
+      .bit_width =  5 },
+    { .name = "acl-hit",
+      .help = "ACL hit flag",
+      .bit_width =  1 },
+    { .name = "dp",
+      .help = "Drop precedence",
+      .bit_width =  1 },
+    { .name = "lrn-flags",
+      .help = "Learn flags",
+      .bit_width =  2 },
+    { .name = "cpuq",
+      .help = "CPU extraction queue mask",
+      .bit_width =   8 },
+    { .name = "qos-class",
+      .help = "Classified QoS class",
+      .bit_width =   3 },
+    { .name = "tag-type",
+      .help = "C-tag (0) or S-tag (1)",
+      .bit_width =   1 },
+    { .name = "pcp",
+      .help = "Classified PCP",
+      .bit_width =   3 },
+    { .name = "dei",
+      .help = "Classified DEI",
+      .bit_width =   1 },
+    { .name = "vid",
+      .help = "Classified VID",
+      .bit_width =  12 },
+};
+
+static hdr_t HDR_EFH_CRCL = {
+    .name = "efh-crcl",
+    .help = "Extraction Frame Header for Caracal",
+    .fields = EFH_CRCL_FIELDS,
+    .fields_size = sizeof(EFH_CRCL_FIELDS) / sizeof(EFH_CRCL_FIELDS[0]),
+    .parser = hdr_parse_fields,
+};
+
 void ifh_init() {
     def_offset(&HDR_SP_OC1);
     def_val(&HDR_SP_OC1, "et",   "0x8880");
@@ -680,6 +780,10 @@ void ifh_init() {
     def_offset(&HDR_IFH_JR2);
     def_val(&HDR_IFH_JR2, "v-rsv1", "1");
 
+    def_offset(&HDR_IFH_CRCL);
+    def_offset(&HDR_EFH_CRCL);
+    def_val(&HDR_EFH_CRCL, "signature", "0xff");
+
     hdr_tmpls[HDR_TMPL_SP_OC1] =  &HDR_SP_OC1;
     hdr_tmpls[HDR_TMPL_LP_OC1] =  &HDR_LP_OC1;
     hdr_tmpls[HDR_TMPL_IFH_OC1] = &HDR_IFH_OC1;
@@ -687,6 +791,8 @@ void ifh_init() {
     hdr_tmpls[HDR_TMPL_SP_JR2] =  &HDR_SP_JR2;
     hdr_tmpls[HDR_TMPL_LP_JR2] =  &HDR_LP_JR2;
     hdr_tmpls[HDR_TMPL_IFH_JR2] = &HDR_IFH_JR2;
+    hdr_tmpls[HDR_TMPL_IFH_CRCL] = &HDR_IFH_CRCL;
+    hdr_tmpls[HDR_TMPL_EFH_CRCL] = &HDR_EFH_CRCL;
 }
 
 void ifh_uninit() {
@@ -697,6 +803,8 @@ void ifh_uninit() {
     uninit_frame_data(&HDR_SP_JR2);
     uninit_frame_data(&HDR_LP_JR2);
     uninit_frame_data(&HDR_IFH_JR2);
+    uninit_frame_data(&HDR_IFH_CRCL);
+    uninit_frame_data(&HDR_EFH_CRCL);
 
     hdr_tmpls[HDR_TMPL_SP_OC1] = 0;
     hdr_tmpls[HDR_TMPL_LP_OC1] = 0;
@@ -705,4 +813,6 @@ void ifh_uninit() {
     hdr_tmpls[HDR_TMPL_SP_JR2] = 0;
     hdr_tmpls[HDR_TMPL_LP_JR2] = 0;
     hdr_tmpls[HDR_TMPL_IFH_JR2] = 0;
+    hdr_tmpls[HDR_TMPL_IFH_CRCL] = 0;
+    hdr_tmpls[HDR_TMPL_EFH_CRCL] = 0;
 }
