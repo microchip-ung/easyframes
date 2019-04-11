@@ -28,6 +28,10 @@ static hdr_t HDR_ETH = {
 
 void eth_init() {
     def_offset(&HDR_ETH);
+    def_val(&HDR_ETH, "dmac", "ff:ff:ff:ff:ff:ff");
+    def_val(&HDR_ETH, "smac", "00:00:00:00:00:01");
+    def_val(&HDR_ETH, "et", "0xaaaa");
+
     hdr_tmpls[HDR_TMPL_ETH] = &HDR_ETH;
 }
 
