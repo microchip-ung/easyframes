@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2004-2018 Microsemi Corporation "Microsemi".
+ Copyright (c) 2004-2019 Microsemi Corporation "Microsemi".
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -52,8 +52,8 @@ struct timespec start_time;
 
 #define PREFIX_SIZE     40
 #define POSTFIX_SIZE    10
-#define LINE_SIZE_MAX 10000
-#define BUF_SIZE      (20480)
+#define LINE_SIZE_MAX 100000
+#define BUF_SIZE      (204800)
 
 #ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -800,3 +800,4 @@ int main(int argc, char *const argv[], char *const envp[]) {
 
     return 0;
 }
+
