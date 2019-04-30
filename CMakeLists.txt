@@ -31,7 +31,9 @@ target_link_libraries(ef libef pcap)
 
 add_executable(er src/er.c)
 
-install(TARGETS ef er DESTINATION bin)
+add_executable(base64decode src/base64decode.c)
+
+install(TARGETS ef er base64decode DESTINATION bin)
 
 # TEST ONLY
 set(CMAKE_CXX_STANDARD 14)
