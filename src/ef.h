@@ -187,6 +187,7 @@ typedef enum {
     HDR_TMPL_ETH,
     HDR_TMPL_CTAG,
     HDR_TMPL_STAG,
+    HDR_TMPL_RTAG,
     HDR_TMPL_ARP,
     HDR_TMPL_IPV4,
     HDR_TMPL_IPV6,

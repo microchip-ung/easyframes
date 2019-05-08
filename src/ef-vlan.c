@@ -54,18 +54,44 @@ static hdr_t HDR_CTAG = {
     .parser = hdr_parse_fields,
 };
 
+static field_t RTAG_FIELDS[] = {
+    { .name = "recv",
+      .help = "Reserved",
+      .bit_width =  16 },
+    { .name = "seqn",
+      .help = "Sequence Number",
+      .bit_width =  16 },
+    { .name = "et",
+      .help = "EtherType",
+      .bit_width =  16 },
+};
+
+static hdr_t HDR_RTAG = {
+    .name = "rtag",
+    .help = "Redundancy Tag",
+    .type = 0xF1C1,
+    .fields = RTAG_FIELDS,
+    .fields_size = sizeof(RTAG_FIELDS) / sizeof(RTAG_FIELDS[0]),
+    .frame_fill_defaults = vlan_fill_defaults,
+    .parser = hdr_parse_fields,
+};
+
 void vlan_init() {
     def_offset(&HDR_STAG);
     def_offset(&HDR_CTAG);
+    def_offset(&HDR_RTAG);
 
     hdr_tmpls[HDR_TMPL_STAG] = &HDR_STAG;
     hdr_tmpls[HDR_TMPL_CTAG] = &HDR_CTAG;
+    hdr_tmpls[HDR_TMPL_RTAG] = &HDR_RTAG;
 }
 
 void vlan_uninit() {
     uninit_frame_data(&HDR_STAG);
     uninit_frame_data(&HDR_CTAG);
+    uninit_frame_data(&HDR_RTAG);
 
     hdr_tmpls[HDR_TMPL_STAG] = 0;
     hdr_tmpls[HDR_TMPL_CTAG] = 0;
+    hdr_tmpls[HDR_TMPL_RTAG] = 0;
 }
