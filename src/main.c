@@ -157,8 +157,10 @@ int argc_cmd(int argc, const char *argv[], cmd_t *c) {
 
     if (strcmp(argv[i], "name") == 0) {
         c->type = CMD_TYPE_NAME;
+#ifdef HAS_LIBPCAP
     } else if (strcmp(argv[i], "pcap") == 0) {
         c->type = CMD_TYPE_PCAP;
+#endif
     } else if (strcmp(argv[i], "hex") == 0) {
         c->type = CMD_TYPE_HEX;
     } else if (strcmp(argv[i], "rx") == 0) {
@@ -186,7 +188,9 @@ int argc_cmd(int argc, const char *argv[], cmd_t *c) {
         case CMD_TYPE_HEX: /* fallthrough */
             break;
 
+#ifdef HAS_LIBPCAP
         case CMD_TYPE_PCAP: /* fallthrough */
+#endif
         case CMD_TYPE_RX: /* fallthrough */
         case CMD_TYPE_TX: /* fallthrough */
             c->arg0 = strdup(argv[i]);
