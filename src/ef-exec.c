@@ -9,7 +9,9 @@
 #include <sys/stat.h>
 #include <linux/if_ether.h>
 #include <linux/if_packet.h>
+#ifdef HAS_LIBPCAP
 #include <pcap/pcap.h>
+#endif
 #include <assert.h>
 #include <sys/time.h>
 
@@ -209,11 +211,19 @@ int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
 
                     if (aux->tp_status & TP_STATUS_VLAN_VALID) {
                         uint16_t tci = htons(aux->tp_vlan_tci);
-                        uint16_t tpid = htons(aux->tp_vlan_tpid);
 
                         // make room and re-add the vlan tag
                         memmove(b->data + 16, b->data + 12, res - 12);
+#ifdef TP_STATUS_VLAN_TPID_VALID
+                        uint16_t tpid = htons(aux->tp_vlan_tpid);
                         memcpy(b->data + 12, &tpid, sizeof(tpid));
+#else
+                        {
+                            uint8_t eth_p_8021q[2] = {0x81, 0x00};
+                            memcpy(b->data + 12, eth_p_8021q,
+                                   sizeof(eth_p_8021q));
+                        }
+#endif
                         memcpy(b->data + 14, &tci, sizeof(tci));
                         b->size += 4;
                     }
@@ -328,6 +338,7 @@ static int copy_cmd_by_name(const char *name, int cnt, cmd_t *cmds, cmd_t *dst) 
     return -1;
 }
 
+#ifdef HAS_LIBPCAP
 int pcap_append(cmd_t *c) {
     struct pcap_pkthdr pkt;
     struct stat statbuf;
@@ -362,6 +373,7 @@ int pcap_append(cmd_t *c) {
 
     return 0;
 }
+#endif
 
 int exec_cmds(int cnt, cmd_t *cmds) {
     struct timeval tv_now, tv_left, tv_begin, tv_end;
@@ -410,12 +422,14 @@ int exec_cmds(int cnt, cmd_t *cmds) {
     if (err)
         return err;
 
+#ifdef HAS_LIBPCAP
     for (i = 0; i < cnt; i++) {
         if (cmds[i].type != CMD_TYPE_PCAP)
             continue;
 
         pcap_append(&cmds[i]);
     }
+#endif
 
     // Handle HEX strings
     for (i = 0; i < cnt; i++) {

@@ -1,9 +1,20 @@
 project(easyframes)
 
-cmake_minimum_required(VERSION 3.4)
+cmake_minimum_required(VERSION 2.4)
 
 add_definitions(-Wall)
 include_directories(src)
+
+
+set(_LIBPCAP "")
+FIND_PATH(PCAP_INCLUDE_DIR NAMES pcap/pcap.h)
+FIND_LIBRARY(PCAP_LIBRARY NAMES pcap)
+
+if (PCAP_LIBRARY)
+    add_definitions(-DHAS_LIBPCAP)
+    include_directories(${PCAP_INCLUDE_DIR})
+    set(_LIBPCAP ${PCAP_LIBRARY})
+endif()
 
 add_library(libef STATIC
     src/ef.c
@@ -25,10 +36,11 @@ add_library(libef STATIC
     src/ef-oam.c
     src/ef-ts.c
 )
-target_link_libraries(libef pcap)
+
+target_link_libraries(libef ${_LIBPCAP})
 
 add_executable(ef src/mainmain.c) # todo, rename to main.c
-target_link_libraries(ef libef pcap)
+target_link_libraries(ef libef ${_LIBPCAP})
 
 add_executable(er src/er.c)
 

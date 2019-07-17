@@ -214,7 +214,9 @@ extern hdr_t *hdr_tmpls[HDR_TMPL_SIZE];
 typedef enum {
     CMD_TYPE_INVALID,
     CMD_TYPE_NAME,
+#ifdef HAS_LIBPCAP
     CMD_TYPE_PCAP,
+#endif
     CMD_TYPE_HEX,
     CMD_TYPE_RX,
     CMD_TYPE_TX,
