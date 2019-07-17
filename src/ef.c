@@ -553,6 +553,7 @@ void udp_init();
 void payload_init();
 void padding_init();
 void oam_init();
+void ts_init();
 
 void init() __attribute__ ((constructor));
 void init() {
@@ -568,6 +569,7 @@ void init() {
     payload_init();
     padding_init();
     oam_init();
+    ts_init();
 }
 
 void ifh_uninit();
@@ -582,6 +584,7 @@ void udp_uninit();
 void payload_uninit();
 void padding_uninit();
 void oam_uninit();
+void ts_uninit();
 
 void uninit() __attribute__ ((destructor));
 void uninit() {
@@ -597,5 +600,6 @@ void uninit() {
     payload_uninit();
     padding_uninit();
     oam_uninit();
+    ts_uninit();
 }
 
