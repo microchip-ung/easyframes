@@ -202,6 +202,9 @@ typedef enum {
     HDR_TMPL_OAM_LB,
     HDR_TMPL_OAM_LT,
     HDR_TMPL_OAM_RAPS,
+    HDR_TMPL_TS_SYNC,
+    HDR_TMPL_TS_REQUEST,
+    HDR_TMPL_TS_RESPONCE,
 
     HDR_TMPL_SIZE,
 } hdr_tmpl_t;

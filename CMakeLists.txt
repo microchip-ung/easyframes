@@ -23,6 +23,7 @@ add_library(libef STATIC
     src/ef-payload.c
     src/ef-padding.c
     src/ef-oam.c
+    src/ef-ts.c
 )
 target_link_libraries(libef pcap)
 
