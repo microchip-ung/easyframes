@@ -100,11 +100,11 @@ static hdr_t HDR_REQUEST = {
     .parser = hdr_parse_fields,
 };
 
-static int responce_fill_defaults(struct frame *f, int stack_idx) {
+static int response_fill_defaults(struct frame *f, int stack_idx) {
     return 0;
 }
 
-static field_t RESPONCE_FIELDS[] = {
+static field_t RESPONSE_FIELDS[] = {
     /* HEADER - All fields are prefixed with "hdr-" */
     { .name = "hdr-transportSpecific",
       .help = "",
@@ -188,13 +188,13 @@ static field_t RESPONCE_FIELDS[] = {
       .bit_width =   16 }, 
 };
 
-static hdr_t HDR_RESPONCE = {
-    .name = "ts-responce",
-    .help = "TS-RESPONCE frame",
+static hdr_t HDR_RESPONSE = {
+    .name = "ts-response",
+    .help = "TS-RESPONSE frame",
     .type = 0x88F7,
-    .fields = RESPONCE_FIELDS,
-    .fields_size = sizeof(RESPONCE_FIELDS) / sizeof(RESPONCE_FIELDS[0]),
-    .frame_fill_defaults = responce_fill_defaults,
+    .fields = RESPONSE_FIELDS,
+    .fields_size = sizeof(RESPONSE_FIELDS) / sizeof(RESPONSE_FIELDS[0]),
+    .frame_fill_defaults = response_fill_defaults,
     .parser = hdr_parse_fields,
 };
 
@@ -202,40 +202,31 @@ void ts_init() {
     def_offset(&HDR_SYNC);
     def_val(&HDR_SYNC, "hdr-messageType", "0");
     def_val(&HDR_SYNC, "hdr-messageLength", "44");
-    def_val(&HDR_SYNC, "hdr-clockId", "0xAABBCCDDEEFFAABB");
-    def_val(&HDR_SYNC, "hdr-portNumber", "0xAABB");
     def_val(&HDR_SYNC, "ots-secondsField", "0");
     def_val(&HDR_SYNC, "ots-nanosecondsField", "0");
 
-    def_offset(&HDR_REQUEST);
     def_val(&HDR_REQUEST, "hdr-messageType", "1");
     def_val(&HDR_REQUEST, "hdr-messageLength", "44");
-    def_val(&HDR_REQUEST, "hdr-clockId", "0xAABBCCDDEEFFAABB");
-    def_val(&HDR_REQUEST, "hdr-portNumber", "0xAABB");
     def_val(&HDR_REQUEST, "ots-secondsField", "0");
     def_val(&HDR_REQUEST, "ots-nanosecondsField", "0");
 
-    def_offset(&HDR_RESPONCE);
-    def_val(&HDR_RESPONCE, "hdr-messageType", "9");
-    def_val(&HDR_RESPONCE, "hdr-messageLength", "54");
-    def_val(&HDR_RESPONCE, "hdr-clockId", "0xAABBCCDDEEFFAABB");
-    def_val(&HDR_RESPONCE, "hdr-portNumber", "0xAABB");
-    def_val(&HDR_RESPONCE, "rts-secondsField", "0");
-    def_val(&HDR_RESPONCE, "rts-nanosecondsField", "0");
-    def_val(&HDR_RESPONCE, "rpi-clockId", "0xAABBCCDDEEFFAABB");
-    def_val(&HDR_RESPONCE, "rpi-portNumber", "0xAABB");
+    def_offset(&HDR_RESPONSE);
+    def_val(&HDR_RESPONSE, "hdr-messageType", "9");
+    def_val(&HDR_RESPONSE, "hdr-messageLength", "54");
+    def_val(&HDR_RESPONSE, "rts-secondsField", "0");
+    def_val(&HDR_RESPONSE, "rts-nanosecondsField", "0");
 
     hdr_tmpls[HDR_TMPL_TS_SYNC] = &HDR_SYNC;
     hdr_tmpls[HDR_TMPL_TS_REQUEST] = &HDR_REQUEST;
-    hdr_tmpls[HDR_TMPL_TS_RESPONCE] = &HDR_RESPONCE;
+    hdr_tmpls[HDR_TMPL_TS_RESPONSE] = &HDR_RESPONSE;
 }
 
 void ts_uninit() {
     uninit_frame_data(&HDR_SYNC);
     uninit_frame_data(&HDR_REQUEST);
-    uninit_frame_data(&HDR_RESPONCE);
+    uninit_frame_data(&HDR_RESPONSE);
 
     hdr_tmpls[HDR_TMPL_TS_SYNC] = 0;
     hdr_tmpls[HDR_TMPL_TS_REQUEST] = 0;
-    hdr_tmpls[HDR_TMPL_TS_RESPONCE] = 0;
+    hdr_tmpls[HDR_TMPL_TS_RESPONSE] = 0;
 }
