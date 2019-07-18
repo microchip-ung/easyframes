@@ -171,7 +171,7 @@ static field_t RESPONSE_FIELDS[] = {
     /* Padding to get 64 bytes frame */
     { .name = "padding",
       .help = "",
-      .bit_width =  10*8 },
+      .bit_width =  4*8 },
 };
 
 static hdr_t HDR_RESPONSE = {
