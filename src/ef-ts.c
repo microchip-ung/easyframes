@@ -77,7 +77,12 @@ static field_t SYNC_REQ_FIELDS[] = {
     { .name = "ots-nanosecondsField",
       .help = "",
       .bit_offset =  0,
-      .bit_width =   32 }
+      .bit_width =   32 },
+
+    /* Padding to get 64 bytes frame */
+    { .name = "padding",
+      .help = "",
+      .bit_width =  6*8 }
 };
 
 static hdr_t HDR_SYNC = {
