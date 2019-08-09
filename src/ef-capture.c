@@ -170,19 +170,19 @@ static int capture_execl(const char *c) {
 }
 
 static int capture_start(struct capture *c) {
+    int pid;
     signal(SIGCHLD, &signal_child);
 
-    c->pid = fork();
+    pid = fork();
 
-    if (c->pid == 0) {
+    if (pid == 0) {
         return capture_execl((char *)c->tcpdump_cmd->data);
     }
 
-    if (c->pid > 0 && kill(c->pid, 0) == 0) {
+    if (pid > 0 && kill(pid, 0) == 0) {
         printf("PID %d -> %s\n", c->pid, c->tcpdump_cmd->data);
         c->running = 1;
-    } else {
-        c->pid = 0;
+        c->pid = pid;
     }
 
     // We need to wait a bit before tcpdump is ready to capture frames
@@ -245,6 +245,14 @@ int capture_all_stop() {
     }
 
     wait_poll(10000);
+
+    p = HEAD;
+    while (p) {
+        struct capture *pp = p;
+        p = p->next;
+        bfree(pp->tcpdump_cmd);
+        free(pp);
+    }
 
     return 0;
 }
