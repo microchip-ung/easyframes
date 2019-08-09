@@ -194,7 +194,7 @@ static int capture_start(struct capture *c) {
     if (pid > 0) {
         c->pid = pid;
         c->running = 1;
-        printf("PID %d -> %s\n", c->pid, c->tcpdump_cmd->data);
+        po("PID %d -> %s\n", c->pid, c->tcpdump_cmd->data);
     }
 
     return c->pid;
