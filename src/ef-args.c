@@ -285,7 +285,6 @@ int argc_cmds(int argc, const char *argv[]) {
         return -1;
     }
 
-    printf("Start capture\n");
     capture_all_start();
 
     tv_left.tv_sec = TIME_OUT_MS / 1000;
@@ -293,7 +292,6 @@ int argc_cmds(int argc, const char *argv[]) {
     gettimeofday(&tv_begin, 0);
     timeradd(&tv_begin, &tv_left, &tv_end);
 
-    printf("Exec\n");
     res = exec_cmds(cmd_idx, cmds);
 
     // exec_cmds may return faster than TIME_OUT_MS if no rx interafces are
@@ -306,7 +304,6 @@ int argc_cmds(int argc, const char *argv[]) {
         usleep(tv_left.tv_usec);
     }
 
-    printf("Stop capture\n");
     capture_all_stop();
 
     for (i = 0; i < cmd_idx; ++i) {
@@ -344,7 +341,6 @@ int main_(int argc, const char *argv[]) {
         }
     }
 
-    printf("Main_\n");
     return argc_cmds(argc - optind, argv + optind);
 }
 

@@ -1,7 +1,7 @@
-
 #ifndef EF_H
 #define EF_H
 
+#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
@@ -250,7 +250,7 @@ typedef struct {
 
 int exec_cmds(int cnt, cmd_t *cmds);
 
-void print_hex_str(int fd, void *_d, int s);
+void print_hex_str(FILE *fs, void *_d, int s);
 
 int argc_frame(int argc, const char *argv[], frame_t *f);
 void cmd_destruct(cmd_t *c);

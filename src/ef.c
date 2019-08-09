@@ -19,12 +19,12 @@ void hexdump(void *_d, int s) {
     }
 }
 
-void print_hex_str(int fd, void *_d, int s) {
+void print_hex_str(FILE *fs, void *_d, int s) {
     uint8_t *d = (uint8_t *)_d;
     uint8_t *e = d + s;
 
     for (; d != e; ++d) {
-        dprintf(fd, "%02hhx", *d);
+        fprintf(fs, "%02hhx", *d);
     }
 }
 
