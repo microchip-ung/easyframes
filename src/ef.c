@@ -12,19 +12,19 @@ void hexdump(void *_d, int s) {
     uint8_t *e = d + s;
 
     while (d != e) {
-        printf("%08tx: ", (void *)d - (void *)_d);
+        po("%08tx: ", (void *)d - (void *)_d);
         for (i = 0; i < 16 && d != e; ++i, ++d)
-            printf("%02hhx ", *d);
-        printf("\n");
+            po("%02hhx ", *d);
+        po("\n");
     }
 }
 
-void print_hex_str(FILE *fs, void *_d, int s) {
+void print_hex_str(int fd, void *_d, int s) {
     uint8_t *d = (uint8_t *)_d;
     uint8_t *e = d + s;
 
     for (; d != e; ++d) {
-        fprintf(fs, "%02hhx", *d);
+        dprintf(fd, "%02hhx", *d);
     }
 }
 
@@ -179,7 +179,7 @@ void def_offset(hdr_t *h) {
             if (f->bit_offset < offset)
                 continue;
             else
-                printf("ERROR: Fields with explicit bit_offset must be "
+                po("ERROR: Fields with explicit bit_offset must be "
                        "specified after the one it overloads in field_t\n");
         }
         f->bit_offset = offset;
@@ -346,7 +346,7 @@ int hdr_parse_fields(frame_t *frame, hdr_t *hdr, int argc, const char *argv[]) {
 
         // Check to see if we have a value argument
         if (i >= argc) {
-            printf("ERROR: Missing argument to %s\n", argv[i - 1]);
+            po("ERROR: Missing argument to %s\n", argv[i - 1]);
             return -1;
         }
 
@@ -361,7 +361,7 @@ int hdr_parse_fields(frame_t *frame, hdr_t *hdr, int argc, const char *argv[]) {
             return -1;
         }
 
-        //printf("Assigned value for %s\n", f->name);
+        //po("Assigned value for %s\n", f->name);
         if (f->parser != NULL) {
             f->val = f->parser(argv[i], BIT_TO_BYTE(f->bit_width));
         } else {
@@ -382,16 +382,16 @@ static int hdr_copy_to_buf_(hdr_t *hdr, int offset, buf_t *buf, int mask) {
 
     for (i = 0, f = hdr->fields; i < hdr->fields_size; ++i, ++f) {
         if (BIT_TO_BYTE(f->bit_width) + offset > buf->size) {
-            //printf("Buf over flow\n");
+            //po("Buf over flow\n");
             return -1;
         }
 
 
         if (f->val) {
-            //printf("val %s\n", f->name);
+            //po("val %s\n", f->name);
             v = f->val;
         } else if (f->def) {
-            //printf("def %s\n", f->name);
+            //po("def %s\n", f->name);
             v = f->def;
         } else {
             v = 0;
@@ -432,7 +432,7 @@ buf_t *frame_to_buf(frame_t *f) {
     buf_t *buf;
     int frame_size = 0, offset = 0;
 
-    //printf("Stack size: %d\n", f->stack_size);
+    //po("Stack size: %d\n", f->stack_size);
     for (i = 0; i < f->stack_size; ++i) {
         f->stack[i]->offset_in_frame = frame_size;
         frame_size += f->stack[i]->size;
@@ -489,18 +489,18 @@ void field_help(field_t *f, int indent)
     int i;
 
     for (i = 0; i < indent; ++i) {
-        printf(" ");
+        po(" ");
     }
 
-    printf("%-20s", f->name);
-    printf("+%3d:%3d ", f->bit_offset, f->bit_width);
+    po("%-20s", f->name);
+    po("+%3d:%3d ", f->bit_offset, f->bit_width);
 
     if (f->help)
-        printf(" %s", f->help);
+        po(" %s", f->help);
     else
-        printf(" %s", "MISSING FIELD HELP TEXT!");
+        po(" %s", "MISSING FIELD HELP TEXT!");
 
-    printf("\n");
+    po("\n");
 }
 
 void hdr_help(hdr_t **hdr, int size, int indent, int show_fields)
@@ -515,25 +515,25 @@ void hdr_help(hdr_t **hdr, int size, int indent, int show_fields)
             continue;
 
         for (j = 0; j < indent; ++j) {
-            printf(" ");
+            po(" ");
         }
-        printf("%-16s", h->name);
+        po("%-16s", h->name);
 
         if (h->help)
-            printf(" %s", h->help);
+            po(" %s", h->help);
         else
-            printf(" %s", "MISSING HDR HELP TEXT!");
+            po(" %s", "MISSING HDR HELP TEXT!");
 
-        printf("\n");
+        po("\n");
 
         if (show_fields) {
-            printf("\n");
-            printf("Specify the %s header by using one or more of the following fields:\n",
+            po("\n");
+            po("Specify the %s header by using one or more of the following fields:\n",
                    h->name);
             for (j = 0; j < indent; ++j) {
-                printf(" ");
+                po(" ");
             }
-            printf("- Name ------------ offset:width --- Description --------------------------\n");
+            po("- Name ------------ offset:width --- Description --------------------------\n");
             for (j = 0; j < h->fields_size; ++j) {
                 field_help(&h->fields[j], indent + 2);
             }

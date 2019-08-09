@@ -29,7 +29,7 @@ int raw_socket(const char *name) {
 
     s = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
     if (s < 0) {
-        printf("%s:%d socket error: %m\n", __FILE__, __LINE__);
+        po("%s:%d socket error: %m\n", __FILE__, __LINE__);
         return -1;
     }
 
@@ -41,7 +41,7 @@ int raw_socket(const char *name) {
 
     res = bind(s, (struct sockaddr*)&sa, sizeof(sa));
     if (res < 0) {
-        printf("%s:%d bind error: %m\n", __FILE__, __LINE__);
+        po("%s:%d bind error: %m\n", __FILE__, __LINE__);
         close(s);
         return -1;
     }
@@ -50,7 +50,7 @@ int raw_socket(const char *name) {
     mr.mr_type = PACKET_MR_PROMISC;
     res = setsockopt(s, SOL_PACKET, PACKET_ADD_MEMBERSHIP, &mr, sizeof(mr));
     if (res == -1) {
-        printf("%s:%d Failed to set PROMISC: %m\n", __FILE__, __LINE__);
+        po("%s:%d Failed to set PROMISC: %m\n", __FILE__, __LINE__);
         close(s);
         return -1;
     }
@@ -58,7 +58,7 @@ int raw_socket(const char *name) {
     val = 1;
     setsockopt(s, SOL_PACKET, PACKET_AUXDATA, &val, sizeof(val));
     if (res == -1) {
-        printf("%s:%d Failed to enable AUXDATA: %m\n", __FILE__, __LINE__);
+        po("%s:%d Failed to enable AUXDATA: %m\n", __FILE__, __LINE__);
         close(s);
         return -1;
     }
@@ -114,7 +114,7 @@ int add_cmd_to_resource(cmd_t *c, int res_max, int res_valid,
     assert(res_valid < res_max);
     resources[res_valid].cmd = c;
     resources[res_valid].fd = -1;
-    // printf("%s at resource %d\n", resources[res_valid].cmd->arg0, res_valid);
+    // po("%s at resource %d\n", resources[res_valid].cmd->arg0, res_valid);
 
     return 1;
 }
@@ -249,24 +249,24 @@ int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
             }
 
             if (match) {
-                printf("RX-OK  %16s: ", resources[i].cmd->arg0);
+                po("RX-OK  %16s: ", resources[i].cmd->arg0);
                 if (resources[i].cmd->name) {
-                    printf("name %s", resources[i].cmd->name);
+                    po("name %s", resources[i].cmd->name);
                 } else {
-                    print_hex_str(stdout, b->data, b->size);
+                    print_hex_str(1, b->data, b->size);
                     if (resources[i].cmd->frame_mask_buf) {
-                        printf("RX-OK MASK:              ");
-                        print_hex_str(stdout, resources[i].cmd->frame_mask_buf->data,
+                        po("RX-OK MASK:              ");
+                        print_hex_str(1, resources[i].cmd->frame_mask_buf->data,
                                       resources[i].cmd->frame_mask_buf->size);
-                        printf("\n");
+                        po("\n");
                     }
                 }
-                printf("\n");
+                po("\n");
             } else {
                 resources[i].rx_err_cnt ++;
-                fprintf(stderr, "RX-ERR %16s: ", resources[i].cmd->arg0);
-                print_hex_str(stderr, b->data, b->size);
-                fprintf(stderr, "\n");
+                pe("RX-ERR %16s: ", resources[i].cmd->arg0);
+                print_hex_str(2, b->data, b->size);
+                pe("\n");
             }
 
         }
@@ -297,13 +297,13 @@ int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
                 }
 
                 if (res == b->size && cmd_ptr->repeat == 0) {
-                    printf("TX     %16s: ", cmd_ptr->arg0);
+                    po("TX     %16s: ", cmd_ptr->arg0);
                     if (cmd_ptr->name) {
-                        printf("name %s", cmd_ptr->name);
+                        po("name %s", cmd_ptr->name);
                     } else {
-                        print_hex_str(stdout, b->data, b->size);
+                        print_hex_str(1, b->data, b->size);
                     }
-                    printf("\n");
+                    po("\n");
                     cmd_ptr->done = 1;
                 }
                 break;
@@ -348,7 +348,7 @@ int pcap_append(cmd_t *c) {
 
     pcap = pcap_open_dead(DLT_EN10MB, 65535);
     if (!pcap) {
-        fprintf(stderr, "Error from pcap_open_dead(): %s\n", pcap_geterr(pcap));
+        pe("Error from pcap_open_dead(): %s\n", pcap_geterr(pcap));
         return -1;
     }
 
@@ -359,7 +359,7 @@ int pcap_append(cmd_t *c) {
     }
 
     if (!pcapfile) {
-        fprintf(stderr, "Error from pcap_dump_open(): %s\n", pcap_geterr(pcap));
+        pe("Error from pcap_dump_open(): %s\n", pcap_geterr(pcap));
         return -1;
     }
 
@@ -389,15 +389,15 @@ int exec_cmds(int cnt, cmd_t *cmds) {
             continue;
 
         if (cmds[i].frame_buf && cmds[i].name) {
-            printf("NAME:  %16s: ", cmds[i].name);
-            print_hex_str(stdout, cmds[i].frame_buf->data, cmds[i].frame_buf->size);
-            printf("\n");
+            po("NAME:  %16s: ", cmds[i].name);
+            print_hex_str(1, cmds[i].frame_buf->data, cmds[i].frame_buf->size);
+            po("\n");
 
             if (cmds[i].frame_mask_buf) {
-                printf("NAME MASK:               ");
-                print_hex_str(stdout, cmds[i].frame_mask_buf->data,
+                po("NAME MASK:               ");
+                print_hex_str(1, cmds[i].frame_mask_buf->data,
                               cmds[i].frame_mask_buf->size);
-                printf("\n");
+                po("\n");
             }
         }
     }
@@ -414,7 +414,7 @@ int exec_cmds(int cnt, cmd_t *cmds) {
             continue;
 
         if (copy_cmd_by_name(cmds[i].name, cnt, cmds, &cmds[i]) != 0) {
-            fprintf(stderr, "No frame in inventory called %s\n", cmds[i].name);
+            pe("No frame in inventory called %s\n", cmds[i].name);
             err ++;
         }
     }
@@ -437,15 +437,15 @@ int exec_cmds(int cnt, cmd_t *cmds) {
             continue;
 
         if (cmds[i].frame_mask_buf && cmds[i].frame_buf) {
-            printf("DATA: ");
-            print_hex_str(stdout, cmds[i].frame_buf->data, cmds[i].frame_buf->size);
-            printf("\nMASK: ");
-            print_hex_str(stdout, cmds[i].frame_mask_buf->data,
+            po("DATA: ");
+            print_hex_str(1, cmds[i].frame_buf->data, cmds[i].frame_buf->size);
+            po("\nMASK: ");
+            print_hex_str(1, cmds[i].frame_mask_buf->data,
                           cmds[i].frame_buf->size);
-            printf("\n");
+            po("\n");
         } else if (cmds[i].frame_buf) {
-            print_hex_str(stdout, cmds[i].frame_buf->data, cmds[i].frame_buf->size);
-            printf("\n");
+            print_hex_str(1, cmds[i].frame_buf->data, cmds[i].frame_buf->size);
+            po("\n");
         }
     }
 
@@ -521,22 +521,22 @@ int exec_cmds(int cnt, cmd_t *cmds) {
             if (cmd_ptr->done)
                 continue;
 
-            fprintf(stderr, "NO-RX  %16s: ", cmd_ptr->arg0);
+            pe("NO-RX  %16s: ", cmd_ptr->arg0);
             if (cmd_ptr->name) {
-                fprintf(stderr, "name %s", cmd_ptr->name);
+                pe("name %s", cmd_ptr->name);
             } else {
-                print_hex_str(stderr, cmd_ptr->frame_buf->data,
+                print_hex_str(2, cmd_ptr->frame_buf->data,
                               cmd_ptr->frame_buf->size);
-                fprintf(stderr, "\n");
+                pe("\n");
                 if (cmd_ptr->frame_mask_buf) {
-                    fprintf(stderr, "NO-RX MASK:              ");
-                    print_hex_str(stderr, cmd_ptr->frame_mask_buf->data,
+                    pe("NO-RX MASK:              ");
+                    print_hex_str(2, cmd_ptr->frame_mask_buf->data,
                                   cmd_ptr->frame_mask_buf->size);
-                    fprintf(stderr, "\n");
+                    pe("\n");
                 }
             }
 
-            fprintf(stderr, "\n");
+            pe("\n");
 
             err++;
         }

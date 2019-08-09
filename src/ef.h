@@ -1,7 +1,6 @@
 #ifndef EF_H
 #define EF_H
 
-#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
@@ -64,6 +63,9 @@ int bl_printf_append(buf_list_t *b, const char *format, ...)
 
 buf_t *bprintf(const char *fmt, ...)
     __attribute__ ((format (printf, 1, 2)));
+
+int po(const char *fmt, ...) __attribute__ ((format (printf, 1, 2)));
+int pe(const char *fmt, ...) __attribute__ ((format (printf, 1, 2)));
 
 //ssize_t bwrite(int fd, const buf_list_t *buf, ssize_t off, size_t count);
 size_t bwrite_all(int fd, const buf_list_t *buf);
@@ -250,7 +252,7 @@ typedef struct {
 
 int exec_cmds(int cnt, cmd_t *cmds);
 
-void print_hex_str(FILE *fs, void *_d, int s);
+void print_hex_str(int fd, void *_d, int s);
 
 int argc_frame(int argc, const char *argv[], frame_t *f);
 void cmd_destruct(cmd_t *c);

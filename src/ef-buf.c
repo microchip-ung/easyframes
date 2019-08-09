@@ -174,6 +174,24 @@ void bl_check(buf_list_t *b) {
     assert(0);
 }
 
+int po(const char *fmt, ...) {
+    int res;
+    va_list ap;
+    va_start(ap, fmt);
+    res = vdprintf(1, fmt, ap);
+    va_end(ap);
+    return res;
+}
+
+int pe(const char *fmt, ...) {
+    int res;
+    va_list ap;
+    va_start(ap, fmt);
+    res = vdprintf(2, fmt, ap);
+    va_end(ap);
+    return res;
+}
+
 int bl_printf_append(buf_list_t *b, const char *fmt, ...) {
     char *data_end;
     va_list ap;

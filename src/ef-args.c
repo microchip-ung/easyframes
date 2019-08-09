@@ -13,10 +13,10 @@ int argc_frame(int argc, const char *argv[], frame_t *f) {
 
     i = 0;
     while (i < argc) {
-        //printf("%d, i=%d/%d %s\n", __LINE__, i, argc, argv[i]);
+        //po("%d, i=%d/%d %s\n", __LINE__, i, argc, argv[i]);
 
         if (strcmp(argv[i], "help") == 0) {
-            printf("Specify a frame by using one or more of the following headers:\n");
+            po("Specify a frame by using one or more of the following headers:\n");
             hdr_help(hdr_tmpls, HDR_TMPL_SIZE, 2, 0);
             return -1;
         }
@@ -31,26 +31,26 @@ int argc_frame(int argc, const char *argv[], frame_t *f) {
         }
 
         if (!h) {
-            //printf("ERROR: Invalid parameter: %s\n", argv[i]);
+            //po("ERROR: Invalid parameter: %s\n", argv[i]);
             //return -1;
             return i;
         }
 
         h = frame_clone_and_push_hdr(f, h);
         if (!h) {
-            printf("ERROR: frame_clone_and_push_hdr() failed\n");
+            po("ERROR: frame_clone_and_push_hdr() failed\n");
             return -1;
         }
 
-        //printf("Parsing hdr: %s: %p\n", h->name, h);
-        //printf("%d, i=%d/%d %s\n", __LINE__, i, argc, argv[i]);
+        //po("Parsing hdr: %s: %p\n", h->name, h);
+        //po("%d, i=%d/%d %s\n", __LINE__, i, argc, argv[i]);
         res = h->parser(f, h, argc - i, argv + i);
         if (res < 0) {
             return res;
         }
 
         i += res;
-        //printf("%d, i=%d/%d %s\n", __LINE__, i, argc, argv[i]);
+        //po("%d, i=%d/%d %s\n", __LINE__, i, argc, argv[i]);
     }
 
     return i;
@@ -77,82 +77,82 @@ void cmd_destruct(cmd_t *c) {
 
 
 void print_help() {
-    printf("Usage: ef [options] <command> args [<command> args]...\n");
-    printf("\n");
-    printf("The ef (easy frame) tool allow to easily transmit frames, and\n");
-    printf("optionally specify what frames it expect to receive.\n");
-    printf("\n");
-    printf("Options:\n");
-    printf("  -h                    Top level help message.\n");
-    printf("  -t <timeout-in-ms>    When listening on an interface (rx),\n");
-    printf("     When listening on an interface (rx), the tool will always\n");
-    printf("     listen during the entire timeout period. This is needed,\n");
-    printf("     as we must also check that no frames are received during\n");
-    printf("     the test.  Default is 100ms.\n");
-    printf("\n");
-    printf("  -c <if>,[<snaplen>],[<sync>],[<file>],[cnt]\n");
-    printf("     Use tcpdump to capture traffic on an interface while the\n");
-    printf("     test is running. If file is not specified, then it will\n");
-    printf("     default to './<if>.pcap'\n");
-    printf("     tcpdump will be invoked with the following options:\n");
-    printf("     tcpdump -i <if> [-s <snaplen>] [-j <sync>] -w <file> -c <cnt>\n");
-    printf("\n");
-    printf("\n");
-    printf("Valid commands:\n");
-    printf("  tx: Transmit a frame on a interface. Syntax:\n");
-    printf("  tx <interface> FRAME | help\n");
-    printf("\n");
-    printf("  rx: Specify a frame which is expected to be received. If no \n");
-    printf("      frame is specified, then the expectation is that no\n");
-    printf("      frames are received on the interface. Syntax:\n");
-    printf("  rx <interface> [FRAME] | help\n");
-    printf("\n");
-    printf("  hex: Print a frame on stdout as a hex string. Syntax:\n");
-    printf("  hex FRAME\n");
-    printf("\n");
-    printf("  name: Specify a frame, and provide a name (alias) for it.\n");
-    printf("        This alias can be used other places instead of the\n");
-    printf("        complete frame specification. Syntax:\n");
-    printf("  name <name> FRAME-SPEC | help\n");
-    printf("\n");
-    printf("  pcap: Write a frame to a pcap file (appending if the file\n");
-    printf("  exists already). Syntax:\n");
-    printf("  pcap <file> FRAME | help\n");
-    printf("\n");
-    printf("Where FRAME is either a frame specification of a named frame.\n");
-    printf("Syntax: FRAME ::= FRAME-SPEC | name <name>\n");
-    printf("\n");
-    printf("FRAME-SPEC is a textual specification of a frame.\n");
-    printf("Syntax: FRAME-SPEC ::= [HDR-NAME [<HDR-FIELD> <HDR-FIELD-VAL>]...]...\n");
-    printf("        HDR-NAME ::= eth|stag|ctag|arp|ipv4|udp\n");
-    printf("\n");
-    printf("Examples:\n");
-    printf("  ef tx eth0 eth dmac ::1 smac ::2 stag vid 0x100 ipv4 dip 1 udp\n");
-    printf("\n");
-    printf("  ef name f1 eth dmac ff:ff:ff:ff:ff:ff smac ::1\\\n");
-    printf("     rx eth0 name f1\\\n");
-    printf("     tx eth1 name f1\n");
-    printf("\n");
-    printf("A complete header or a given field in a header can be ignored by\n");
-    printf("using the 'ign' or 'ignore' flag.\n");
-    printf("Example:\n");
-    printf("  To ignore the ipv4 header completly:\n");
-    printf("  ef hex eth dmac 1::2 smac 3::4 ipv4 ign udp\n");
-    printf("\n");
-    printf("  To ignore the ipv4 everything in the ipv4 header except the sip:\n");
-    printf("  ef hex eth dmac 1::2 smac 3::4 ipv4 ign sip 1.2.3.4 udp\n");
-    printf("\n");
-    printf("  To ignore the sip field in ipv4:\n");
-    printf("  ef hex eth dmac 1::2 smac 3::4 ipv4 sip ign udp\n");
-    printf("\n");
-    printf("A frame can be repeated to utilize up to line speed bandwith (>512 byte frames)\n");
-    printf("using the 'rep' or 'repeat' flag.\n");
-    printf("Example:\n");
-    printf("   Send a frame 1 million times:\n");
-    printf("   ef tx eth0 rep 1000000 eth dmac ::1 smac ::2\n");
-    printf("   Note that the repeat flag must follow the tx <interface> key-word\n");
-    printf("   Results must be viewed through the PC or DUT interface counters, i.e. outside of 'ef'\n");
-    printf("\n");
+    po("Usage: ef [options] <command> args [<command> args]...\n");
+    po("\n");
+    po("The ef (easy frame) tool allow to easily transmit frames, and\n");
+    po("optionally specify what frames it expect to receive.\n");
+    po("\n");
+    po("Options:\n");
+    po("  -h                    Top level help message.\n");
+    po("  -t <timeout-in-ms>    When listening on an interface (rx),\n");
+    po("     When listening on an interface (rx), the tool will always\n");
+    po("     listen during the entire timeout period. This is needed,\n");
+    po("     as we must also check that no frames are received during\n");
+    po("     the test.  Default is 100ms.\n");
+    po("\n");
+    po("  -c <if>,[<snaplen>],[<sync>],[<file>],[cnt]\n");
+    po("     Use tcpdump to capture traffic on an interface while the\n");
+    po("     test is running. If file is not specified, then it will\n");
+    po("     default to './<if>.pcap'\n");
+    po("     tcpdump will be invoked with the following options:\n");
+    po("     tcpdump -i <if> [-s <snaplen>] [-j <sync>] -w <file> -c <cnt>\n");
+    po("\n");
+    po("\n");
+    po("Valid commands:\n");
+    po("  tx: Transmit a frame on a interface. Syntax:\n");
+    po("  tx <interface> FRAME | help\n");
+    po("\n");
+    po("  rx: Specify a frame which is expected to be received. If no \n");
+    po("      frame is specified, then the expectation is that no\n");
+    po("      frames are received on the interface. Syntax:\n");
+    po("  rx <interface> [FRAME] | help\n");
+    po("\n");
+    po("  hex: Print a frame on stdout as a hex string. Syntax:\n");
+    po("  hex FRAME\n");
+    po("\n");
+    po("  name: Specify a frame, and provide a name (alias) for it.\n");
+    po("        This alias can be used other places instead of the\n");
+    po("        complete frame specification. Syntax:\n");
+    po("  name <name> FRAME-SPEC | help\n");
+    po("\n");
+    po("  pcap: Write a frame to a pcap file (appending if the file\n");
+    po("  exists already). Syntax:\n");
+    po("  pcap <file> FRAME | help\n");
+    po("\n");
+    po("Where FRAME is either a frame specification of a named frame.\n");
+    po("Syntax: FRAME ::= FRAME-SPEC | name <name>\n");
+    po("\n");
+    po("FRAME-SPEC is a textual specification of a frame.\n");
+    po("Syntax: FRAME-SPEC ::= [HDR-NAME [<HDR-FIELD> <HDR-FIELD-VAL>]...]...\n");
+    po("        HDR-NAME ::= eth|stag|ctag|arp|ipv4|udp\n");
+    po("\n");
+    po("Examples:\n");
+    po("  ef tx eth0 eth dmac ::1 smac ::2 stag vid 0x100 ipv4 dip 1 udp\n");
+    po("\n");
+    po("  ef name f1 eth dmac ff:ff:ff:ff:ff:ff smac ::1\\\n");
+    po("     rx eth0 name f1\\\n");
+    po("     tx eth1 name f1\n");
+    po("\n");
+    po("A complete header or a given field in a header can be ignored by\n");
+    po("using the 'ign' or 'ignore' flag.\n");
+    po("Example:\n");
+    po("  To ignore the ipv4 header completly:\n");
+    po("  ef hex eth dmac 1::2 smac 3::4 ipv4 ign udp\n");
+    po("\n");
+    po("  To ignore the ipv4 everything in the ipv4 header except the sip:\n");
+    po("  ef hex eth dmac 1::2 smac 3::4 ipv4 ign sip 1.2.3.4 udp\n");
+    po("\n");
+    po("  To ignore the sip field in ipv4:\n");
+    po("  ef hex eth dmac 1::2 smac 3::4 ipv4 sip ign udp\n");
+    po("\n");
+    po("A frame can be repeated to utilize up to line speed bandwith (>512 byte frames)\n");
+    po("using the 'rep' or 'repeat' flag.\n");
+    po("Example:\n");
+    po("   Send a frame 1 million times:\n");
+    po("   ef tx eth0 rep 1000000 eth dmac ::1 smac ::2\n");
+    po("   Note that the repeat flag must follow the tx <interface> key-word\n");
+    po("   Results must be viewed through the PC or DUT interface counters, i.e. outside of 'ef'\n");
+    po("\n");
 }
 
 int argc_cmd(int argc, const char *argv[], cmd_t *c) {
@@ -161,7 +161,7 @@ int argc_cmd(int argc, const char *argv[], cmd_t *c) {
     if (i >= argc)
         return 0;
 
-    //printf("%d, i=%d/%d %s\n", __LINE__, i, argc, argv[i]);
+    //po("%d, i=%d/%d %s\n", __LINE__, i, argc, argv[i]);
 
     if (strcmp(argv[i], "name") == 0) {
         c->type = CMD_TYPE_NAME;
@@ -186,7 +186,7 @@ int argc_cmd(int argc, const char *argv[], cmd_t *c) {
     if (i >= argc)
         return 0;
 
-//    printf("%d, i=%d/%d %s\n", __LINE__, i, argc, argv[i]);
+//    po("%d, i=%d/%d %s\n", __LINE__, i, argc, argv[i]);
     switch (c->type) {
         case CMD_TYPE_NAME:
             c->name = strdup(argv[i]);
@@ -217,16 +217,16 @@ int argc_cmd(int argc, const char *argv[], cmd_t *c) {
         }
     }
 
-    //printf("%d, i=%d/%d %s\n", __LINE__, i, argc, argv[i]);
+    //po("%d, i=%d/%d %s\n", __LINE__, i, argc, argv[i]);
     if (i + 1 < argc && strcmp(argv[i], "name") == 0 &&
         c->type != CMD_TYPE_NAME) {
         c->name = strdup(argv[i + 1]);
         i += 2;
-        //printf("%d, assign name: %s\n", __LINE__, c->name);
+        //po("%d, assign name: %s\n", __LINE__, c->name);
         return i;
     }
 
-    //printf("%d, i=%d/%d %s\n", __LINE__, i, argc, argv[i]);
+    //po("%d, i=%d/%d %s\n", __LINE__, i, argc, argv[i]);
     // start parsing the frame
     c->frame = frame_alloc();
     res = argc_frame(argc - i, argv + i, c->frame);
@@ -235,13 +235,13 @@ int argc_cmd(int argc, const char *argv[], cmd_t *c) {
         // RX can have empty frame (meaning nothing)
         frame_free(c->frame);
         c->frame = 0;
-        //printf("%d, i=%d/%d %s\n", __LINE__, i, argc, argv[i]);
+        //po("%d, i=%d/%d %s\n", __LINE__, i, argc, argv[i]);
         return i;
     }
 
     if (res <= 0) {
         cmd_destruct(c);
-        //printf("%d, i=%d/%d %s\n", __LINE__, i, argc, argv[i]);
+        //po("%d, i=%d/%d %s\n", __LINE__, i, argc, argv[i]);
         return res;
     }
 
@@ -253,7 +253,7 @@ int argc_cmd(int argc, const char *argv[], cmd_t *c) {
     }
 
     i += res;
-    //printf("%d, i=%d/%d %s\n", __LINE__, i, argc, argv[i]);
+    //po("%d, i=%d/%d %s\n", __LINE__, i, argc, argv[i]);
 
     return i;
 }
@@ -281,7 +281,7 @@ int argc_cmds(int argc, const char *argv[]) {
     }
 
     if (i != argc) {
-        printf("Parse error! %d %d %d\n", i, argc, cmd_idx);
+        po("Parse error! %d %d %d\n", i, argc, cmd_idx);
         return -1;
     }
 
@@ -330,7 +330,7 @@ int main_(int argc, const char *argv[]) {
 
             case 'c':
                 if (capture_add(optarg)) {
-                    printf("ERROR adding capture interface\n");
+                    po("ERROR adding capture interface\n");
                     return -1;
                 }
                 break;

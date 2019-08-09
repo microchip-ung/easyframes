@@ -22,11 +22,11 @@ static int ipv4_fill_defaults(struct frame *f, int stack_idx) {
     if (!len->val) {
         int i, ip_len = 0;
         for (i = stack_idx; i < f->stack_size; ++i) {
-            //printf("got one\n");
+            //po("got one\n");
             ip_len += f->stack[i]->size;
         }
 
-        //printf("IP len: %d\n", ip_len);
+        //po("IP len: %d\n", ip_len);
         snprintf(buf, 16, "%d", ip_len);
         buf[15] = 0;
         len->val = parse_bytes(buf, 2);

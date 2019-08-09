@@ -52,7 +52,7 @@ int capture_add(char *s) {
     // <if>,[<snaplen>],[<sync>],[<file>]
     const char *s_elements[5] = {};
     struct capture *c;
-    buf_t *b, *b_old;
+    buf_t *b, *b_old, *b_tmp;
     int i = 0;
     char *p;
 
@@ -94,13 +94,19 @@ int capture_add(char *s) {
     }
 
     // file
-    b_old = b;
     if (s_elements[3] && *s_elements[3]) {
-        b = bprintf("%s -w %s", b_old->data, s_elements[3]);
+        b_tmp = bprintf("%s", s_elements[3]);
     } else {
-        b = bprintf("%s -w %s.pcap", b_old->data, s_elements[0]);
+        b_tmp = bprintf("%s.pcap", s_elements[0]);
     }
+    // pcap is not overwriting!!!
+    unlink((char *)b_tmp->data);
+
+    b_old = b;
+    b = bprintf("%s -w %s", b_old->data, b_tmp->data);
     bfree(b_old);
+    bfree(b_tmp);
+    b_tmp = 0;
     b_old = 0;
     if (!b)
         return -1;
@@ -114,6 +120,13 @@ int capture_add(char *s) {
         if (!b)
             return -1;
     }
+
+
+    //b_old = b;
+    //b = bprintf("%s > /dev/null", b_old->data);
+    //bfree(b_old);
+    //b_old = 0;
+
 
     c = calloc(1, sizeof(*c));
 
@@ -148,11 +161,11 @@ void signal_child(int sig) {
                 c->running = 0;
                 if (c->res == 0)
                     c->success = 1;
-                printf("PID %d exited with code %d\n", p, res);
+                po("PID %d exited with code %d\n", p, res);
             } else if (WIFSIGNALED(status)) {
                 int s = WTERMSIG(status);
                 c->running = 0;
-                printf("PID %d exited with signal %d\n", p, s);
+                po("PID %d exited with signal %d\n", p, s);
             }
         }
     }
@@ -161,11 +174,10 @@ void signal_child(int sig) {
 static int capture_execl(const char *c) {
     int i, res;
 
-    for (i = 0; i < 1024; i++)
+    for (i = 0; i < 1024; ++i)
         close(i);
 
     res = execl("/bin/sh", "sh", "-c", c, (char *) NULL);
-
     return res;
 }
 
@@ -179,14 +191,11 @@ static int capture_start(struct capture *c) {
         return capture_execl((char *)c->tcpdump_cmd->data);
     }
 
-    if (pid > 0 && kill(pid, 0) == 0) {
-        printf("PID %d -> %s\n", c->pid, c->tcpdump_cmd->data);
-        c->running = 1;
+    if (pid > 0) {
         c->pid = pid;
+        c->running = 1;
+        printf("PID %d -> %s\n", c->pid, c->tcpdump_cmd->data);
     }
-
-    // We need to wait a bit before tcpdump is ready to capture frames
-    usleep(50000);
 
     return c->pid;
 }
@@ -197,6 +206,12 @@ int capture_all_start() {
     while (p) {
         capture_start(p);
         p = p->next;
+    }
+
+    if (HEAD) {
+        // We need to wait a bit before tcpdump is ready to capture frames
+        // TODO, read the output from tcpdump instead
+        sleep(1);
     }
 
     return 0;
@@ -239,7 +254,7 @@ int capture_all_stop() {
     // If processes are still runnign, then kill them
     for (p = HEAD; p; p = p->next) {
         if (p->running) {
-            printf("Killing: %d!\n", p->pid);
+            po("Killing: %d!\n", p->pid);
             kill(p->pid, SIGTERM);
         }
     }
