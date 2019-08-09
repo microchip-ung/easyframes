@@ -18,7 +18,7 @@ endif()
 
 add_library(libef STATIC
     src/ef.c
-    src/main.c  # TODO, rename to ef-args.c
+    src/ef-args.c  # TODO, rename to ef-args.c
     src/ef-arp.c
     src/ef-buf.c
     src/ef-capture.c
@@ -40,7 +40,7 @@ add_library(libef STATIC
 
 target_link_libraries(libef ${_LIBPCAP})
 
-add_executable(ef src/mainmain.c) # todo, rename to main.c
+add_executable(ef src/main.c) # todo, rename to main.c
 target_link_libraries(ef libef ${_LIBPCAP})
 
 add_executable(er src/er.c)
