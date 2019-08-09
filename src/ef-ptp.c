@@ -86,8 +86,8 @@ static field_t SYNC_REQ_FIELDS[] = {
 };
 
 static hdr_t HDR_SYNC = {
-    .name = "ts-sync",
-    .help = "TS-SYNC frame",
+    .name = "ptp-sync",
+    .help = "PTP-SYNC frame",
     .type = 0x88F7,
     .fields = SYNC_REQ_FIELDS,
     .fields_size = sizeof(SYNC_REQ_FIELDS) / sizeof(SYNC_REQ_FIELDS[0]),
@@ -96,8 +96,8 @@ static hdr_t HDR_SYNC = {
 };
 
 static hdr_t HDR_REQUEST = {
-    .name = "ts-request",
-    .help = "TS-REQUEST frame",
+    .name = "ptp-request",
+    .help = "PTP-REQUEST frame",
     .type = 0x88F7,
     .fields = SYNC_REQ_FIELDS,
     .fields_size = sizeof(SYNC_REQ_FIELDS) / sizeof(SYNC_REQ_FIELDS[0]),
@@ -180,8 +180,8 @@ static field_t RESPONSE_FIELDS[] = {
 };
 
 static hdr_t HDR_RESPONSE = {
-    .name = "ts-response",
-    .help = "TS-RESPONSE frame",
+    .name = "ptp-response",
+    .help = "PTP-RESPONSE frame",
     .type = 0x88F7,
     .fields = RESPONSE_FIELDS,
     .fields_size = sizeof(RESPONSE_FIELDS) / sizeof(RESPONSE_FIELDS[0]),

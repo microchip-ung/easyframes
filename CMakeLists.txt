@@ -18,7 +18,7 @@ endif()
 
 add_library(libef STATIC
     src/ef.c
-    src/ef-args.c  # TODO, rename to ef-args.c
+    src/ef-args.c
     src/ef-arp.c
     src/ef-buf.c
     src/ef-capture.c
@@ -33,7 +33,7 @@ add_library(libef STATIC
     src/ef-padding.c
     src/ef-parse-bytes.c
     src/ef-payload.c
-    src/ef-ts.c
+    src/ef-ptp.c
     src/ef-udp.c
     src/ef-vlan.c
 )
