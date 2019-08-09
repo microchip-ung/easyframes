@@ -178,12 +178,15 @@ static int capture_start(struct capture *c) {
         return capture_execl((char *)c->tcpdump_cmd->data);
     }
 
-    // TODO, check that it is running by doing a waitpid
-
-    if (c->pid > 0) {
+    if (c->pid > 0 && kill(c->pid, 0) == 0) {
         printf("PID %d -> %s\n", c->pid, c->tcpdump_cmd->data);
         c->running = 1;
+    } else {
+        c->pid = 0;
     }
+
+    // We need to wait a bit before tcpdump is ready to capture frames
+    usleep(50000);
 
     return c->pid;
 }
