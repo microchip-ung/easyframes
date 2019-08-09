@@ -231,3 +231,24 @@ int bl_printf_append(buf_list_t *b, const char *fmt, ...) {
     return str_size;
 }
 
+buf_t *bprintf(const char *fmt, ...) {
+    buf_t *b;
+    va_list ap;
+    size_t str_size;
+
+    va_start(ap, fmt);
+    str_size = vsnprintf(0, 0, fmt, ap);
+    va_end(ap);
+
+    b = balloc(str_size + 1);
+
+    if (!b)
+        return b;
+
+    va_start(ap, fmt);
+    str_size = vsnprintf((char *)b->data, b->size, fmt, ap);
+    va_end(ap);
+
+    return b;
+}
+

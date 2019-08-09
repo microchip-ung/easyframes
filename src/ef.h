@@ -48,17 +48,22 @@ typedef struct {
     buf_list_element_t *head;
 } buf_list_t;
 
+buf_t *bl_to_buf(buf_list_t *b);
+
 // debug feature, check invariants
 void bl_check(buf_list_t *b);
 
 void bl_reset(buf_list_t *b);
-void bset_value( buf_t *b, uint8_t v);
+void bset_value(buf_t *b, uint8_t v);
 
 inline void bl_init(buf_list_t *b) { bl_reset(b); }
 inline void bl_destroy(buf_list_t *b) { bl_reset(b); }
 
 int bl_printf_append(buf_list_t *b, const char *format, ...)
     __attribute__ ((format (printf, 2, 3)));
+
+buf_t *bprintf(const char *fmt, ...)
+    __attribute__ ((format (printf, 1, 2)));
 
 //ssize_t bwrite(int fd, const buf_list_t *buf, ssize_t off, size_t count);
 size_t bwrite_all(int fd, const buf_list_t *buf);
@@ -253,6 +258,21 @@ void cmd_destruct(cmd_t *c);
 void print_help();
 int argc_cmds(int argc, const char *argv[]);
 int main_(int argc, const char *argv[]);
+
+struct capture;
+typedef struct capture {
+    struct capture    *next;
+    buf_t             *tcpdump_cmd;
+    pid_t              pid;
+    int                res;
+    int                running;
+    int                success;
+} capture_t;
+
+int capture_cnt();
+int capture_add(char *s);
+int capture_all_start();
+int capture_all_stop();
 
 #ifdef __cplusplus
 }

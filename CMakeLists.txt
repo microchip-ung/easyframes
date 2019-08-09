@@ -19,22 +19,23 @@ endif()
 add_library(libef STATIC
     src/ef.c
     src/main.c  # TODO, rename to ef-args.c
-    src/ef-parse-bytes.c
-    src/ef-exec.c
-    src/ef-buf.c
-    src/ef-ifh.c
-    src/ef-eth.c
-    src/ef-vlan.c
     src/ef-arp.c
+    src/ef-buf.c
+    src/ef-capture.c
+    src/ef-eth.c
+    src/ef-exec.c
+    src/ef-icmp.c
+    src/ef-ifh.c
+    src/ef-igmp.c
     src/ef-ipv4.c
     src/ef-ipv6.c
-    src/ef-icmp.c
-    src/ef-igmp.c
-    src/ef-udp.c
-    src/ef-payload.c
-    src/ef-padding.c
     src/ef-oam.c
+    src/ef-padding.c
+    src/ef-parse-bytes.c
+    src/ef-payload.c
     src/ef-ts.c
+    src/ef-udp.c
+    src/ef-vlan.c
 )
 
 target_link_libraries(libef ${_LIBPCAP})

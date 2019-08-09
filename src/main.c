@@ -1,8 +1,9 @@
 #include "ef.h"
 
-#include <stdio.h>
+#include <sys/time.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <stdio.h>
 
 int argc_frame(int argc, const char *argv[], frame_t *f) {
     int i, j, res;
@@ -84,11 +85,18 @@ void print_help() {
     printf("Options:\n");
     printf("  -h                    Top level help message.\n");
     printf("  -t <timeout-in-ms>    When listening on an interface (rx),\n");
-    printf("                        the tool will always listen during the\n");
-    printf("                        entire timeout period. This is needed,\n");
-    printf("                        as we must also check that no frames\n");
-    printf("                        are received during the test.\n");
-    printf("                        Default is 100ms.\n");
+    printf("     When listening on an interface (rx), the tool will always\n");
+    printf("     listen during the entire timeout period. This is needed,\n");
+    printf("     as we must also check that no frames are received during\n");
+    printf("     the test.  Default is 100ms.\n");
+    printf("\n");
+    printf("  -c <if>,[<snaplen>],[<sync>],[<file>],[cnt]\n");
+    printf("     Use tcpdump to capture traffic on an interface while the\n");
+    printf("     test is running. If file is not specified, then it will\n");
+    printf("     default to './<if>.pcap'\n");
+    printf("     tcpdump will be invoked with the following options:\n");
+    printf("     tcpdump -i <if> [-s <snaplen>] [-j <sync>] -w <file> -c <cnt>\n");
+    printf("\n");
     printf("\n");
     printf("Valid commands:\n");
     printf("  tx: Transmit a frame on a interface. Syntax:\n");
@@ -251,6 +259,8 @@ int argc_cmd(int argc, const char *argv[], cmd_t *c) {
 }
 
 int argc_cmds(int argc, const char *argv[]) {
+    struct timeval tv_now, tv_left, tv_begin, tv_end;
+
     int res, i = 0, cmd_idx = 0;
     cmd_t cmds[100] = {};
 
@@ -275,7 +285,26 @@ int argc_cmds(int argc, const char *argv[]) {
         return -1;
     }
 
+    capture_all_start();
+
+    tv_left.tv_sec = TIME_OUT_MS / 1000;
+    tv_left.tv_usec = (TIME_OUT_MS - (tv_left.tv_sec * 1000)) * 1000;
+    gettimeofday(&tv_begin, 0);
+    timeradd(&tv_begin, &tv_left, &tv_end);
+
     res = exec_cmds(cmd_idx, cmds);
+
+    // exec_cmds may return faster than TIME_OUT_MS if no rx interafces are
+    // specified. We need to sleep the the deceired time if we are capturing
+    // interfaces.
+    gettimeofday(&tv_now, 0);
+    if (capture_cnt() > 0 && timercmp(&tv_now, &tv_end, <)) {
+        timersub(&tv_end, &tv_now, &tv_left);
+        sleep(tv_left.tv_sec);
+        usleep(tv_left.tv_usec);
+    }
+
+    capture_all_stop();
 
     for (i = 0; i < cmd_idx; ++i) {
         cmd_destruct(&cmds[i]);
@@ -289,7 +318,7 @@ int TIME_OUT_MS = 100;
 int main_(int argc, const char *argv[]) {
     int opt;
 
-    while ((opt = getopt(argc, (char * const*)argv, "ht:")) != -1) {
+    while ((opt = getopt(argc, (char * const*)argv, "ht:c:")) != -1) {
         switch (opt) {
             case 'h':
                 print_help();
@@ -297,6 +326,13 @@ int main_(int argc, const char *argv[]) {
 
             case 't':
                 TIME_OUT_MS = atoi(optarg);
+                break;
+
+            case 'c':
+                if (capture_add(optarg)) {
+                    printf("ERROR adding capture interface\n");
+                    return -1;
+                }
                 break;
 
             default: /* '?' */
