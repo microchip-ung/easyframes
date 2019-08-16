@@ -197,10 +197,6 @@ static int capture_start(struct capture *c) {
         po("PID %d -> %s\n", c->pid, c->tcpdump_cmd->data);
     }
 
-    // We need to wait a bit before tcpdump is ready to capture frames
-    // TODO, read the output from tcpdump instead
-    sleep(3);
-
     return c->pid;
 }
 
@@ -211,6 +207,10 @@ int capture_all_start() {
         capture_start(p);
         p = p->next;
     }
+
+    // We need to wait a bit before tcpdump is ready to capture frames
+    // TODO, read the output from tcpdump instead
+    sleep(3);
 
     return 0;
 }
@@ -237,6 +237,8 @@ static void wait_poll(int times) {
 }
 
 int capture_all_stop() {
+    // Apparently it take some time from the frame is received until it find its
+    // way to pcap file.
     sleep(3);
 
     struct capture *p;
