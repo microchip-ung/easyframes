@@ -208,9 +208,11 @@ int capture_all_start() {
         p = p->next;
     }
 
-    // We need to wait a bit before tcpdump is ready to capture frames
-    // TODO, read the output from tcpdump instead
-    sleep(3);
+    if (HEAD) {
+        // We need to wait a bit before tcpdump is ready to capture frames
+        // TODO, read the output from tcpdump instead
+        sleep(3);
+    }
 
     return 0;
 }
@@ -237,11 +239,22 @@ static void wait_poll(int times) {
 }
 
 int capture_all_stop() {
-    // Apparently it take some time from the frame is received until it find its
-    // way to pcap file.
-    sleep(3);
-
     struct capture *p;
+    int cnt = 0;
+
+    // Signal all running
+    for (p = HEAD; p; p = p->next) {
+        if (p->running) {
+            cnt++;
+        }
+    }
+
+    if (cnt) {
+        // Apparently it take some time from the frame is received until it find
+        // its way to pcap file.
+        sleep(3);
+    }
+
     signal(SIGCHLD, signal_empty);
 
     // Signal all running
