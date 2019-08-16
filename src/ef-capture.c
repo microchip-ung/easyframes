@@ -199,7 +199,7 @@ static int capture_start(struct capture *c) {
 
     // We need to wait a bit before tcpdump is ready to capture frames
     // TODO, read the output from tcpdump instead
-    sleep(1);
+    sleep(3);
 
     return c->pid;
 }
