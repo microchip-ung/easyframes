@@ -237,6 +237,8 @@ static void wait_poll(int times) {
 }
 
 int capture_all_stop() {
+    sleep(3);
+
     struct capture *p;
     signal(SIGCHLD, signal_empty);
 
