@@ -197,6 +197,10 @@ static int capture_start(struct capture *c) {
         po("PID %d -> %s\n", c->pid, c->tcpdump_cmd->data);
     }
 
+    // We need to wait a bit before tcpdump is ready to capture frames
+    // TODO, read the output from tcpdump instead
+    sleep(1);
+
     return c->pid;
 }
 
@@ -206,12 +210,6 @@ int capture_all_start() {
     while (p) {
         capture_start(p);
         p = p->next;
-    }
-
-    if (HEAD) {
-        // We need to wait a bit before tcpdump is ready to capture frames
-        // TODO, read the output from tcpdump instead
-        sleep(1);
     }
 
     return 0;
