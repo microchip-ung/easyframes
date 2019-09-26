@@ -249,6 +249,7 @@ int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
             }
 
             if (match) {
+                po("RX-OK  %16s: ", cmd_ptr->arg0);
                 if (cmd_ptr->name) {
                     po("name %s", cmd_ptr->name);
                 } else {
