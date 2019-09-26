@@ -7,7 +7,7 @@ static int sync_req_fill_defaults(struct frame *f, int stack_idx) {
     return 0;
 }
 
-static field_t SYNC_REQ_FIELDS[] = {
+static field_t SYNC_FIELDS[] = {
     /* HEADER - All fields are prefixed with "hdr-" */
     { .name = "hdr-transportSpecific",
       .help = "",
@@ -55,7 +55,7 @@ static field_t SYNC_REQ_FIELDS[] = {
       .bit_width =    64 },
     { .name = "hdr-portNumber",
       .help = "",
-      .bit_width =   16 }, 
+      .bit_width =   16 },
     { .name = "hdr-sequenceId",
       .help = "",
       .bit_offset =  0,
@@ -89,18 +89,97 @@ static hdr_t HDR_SYNC = {
     .name = "ptp-sync",
     .help = "PTP-SYNC frame",
     .type = 0x88F7,
-    .fields = SYNC_REQ_FIELDS,
-    .fields_size = sizeof(SYNC_REQ_FIELDS) / sizeof(SYNC_REQ_FIELDS[0]),
+    .fields = SYNC_FIELDS,
+    .fields_size = sizeof(SYNC_FIELDS) / sizeof(SYNC_FIELDS[0]),
     .frame_fill_defaults = sync_req_fill_defaults,
     .parser = hdr_parse_fields,
 };
+
+static field_t REQ_FIELDS[] = {
+    /* HEADER - All fields are prefixed with "hdr-" */
+    { .name = "hdr-transportSpecific",
+      .help = "",
+      .bit_offset =  0,
+      .bit_width =   4 },
+    { .name = "hdr-messageType",
+      .help = "",
+      .bit_offset =  0,
+      .bit_width =   4 },
+    { .name = "hdr-reserved",
+      .help = "",
+      .bit_offset =  0,
+      .bit_width =   4 },
+    { .name = "hdr-versionPTP",
+      .help = "",
+      .bit_offset =  0,
+      .bit_width =   4 },
+    { .name = "hdr-messageLength",
+      .help = "",
+      .bit_offset =  0,
+      .bit_width =   16 },
+    { .name = "hdr-domainNumber",
+      .help = "",
+      .bit_offset =  0,
+      .bit_width =   8 },
+    { .name = "hdr-reserved1",
+      .help = "",
+      .bit_offset =  0,
+      .bit_width =   8 },
+    { .name = "hdr-flagField",
+      .help = "",
+      .bit_offset =  0,
+      .bit_width =   16 },
+    { .name = "hdr-correctionField",
+      .help = "",
+      .bit_offset =  0,
+      .bit_width =   64 },
+    { .name = "hdr-reserved2",
+      .help = "",
+      .bit_offset =  0,
+      .bit_width =   32 },
+    { .name = "hdr-clockId",
+      .help = "",
+      .bit_offset =  0,
+      .bit_width =    64 },
+    { .name = "hdr-portNumber",
+      .help = "",
+      .bit_width =   16 },
+    { .name = "hdr-sequenceId",
+      .help = "",
+      .bit_offset =  0,
+      .bit_width =   16 },
+    { .name = "hdr-controlField",
+      .help = "",
+      .bit_offset =  0,
+      .bit_width =   8 },
+    { .name = "hdr-logMessageInterval",
+      .help = "",
+      .bit_offset =  0,
+      .bit_width =   8 },
+
+    /* Origin Time Stamp - All fields are prefixed with "ots-" */
+    { .name = "ots-secondsField",
+      .help = "",
+      .bit_offset =  0,
+      .bit_width =    48 },
+    { .name = "ots-nanosecondsField",
+      .help = "",
+      .bit_offset =  0,
+      .bit_width =   32 },
+
+    /* Padding to get 64 bytes frame */
+    { .name = "padding",
+      .help = "",
+      .bit_width =  6*8 }
+};
+
 
 static hdr_t HDR_REQUEST = {
     .name = "ptp-request",
     .help = "PTP-REQUEST frame",
     .type = 0x88F7,
-    .fields = SYNC_REQ_FIELDS,
-    .fields_size = sizeof(SYNC_REQ_FIELDS) / sizeof(SYNC_REQ_FIELDS[0]),
+    .fields = REQ_FIELDS,
+    .fields_size = sizeof(REQ_FIELDS) / sizeof(REQ_FIELDS[0]),
     .frame_fill_defaults = sync_req_fill_defaults,
     .parser = hdr_parse_fields,
 };
@@ -146,7 +225,7 @@ static field_t RESPONSE_FIELDS[] = {
       .bit_width =    64 },
     { .name = "hdr-portNumber",
       .help = "",
-      .bit_width =   16 }, 
+      .bit_width =   16 },
     { .name = "hdr-sequenceId",
       .help = "",
       .bit_width =   16 },
@@ -171,7 +250,7 @@ static field_t RESPONSE_FIELDS[] = {
       .bit_width =    64 },
     { .name = "rpi-portNumber",
       .help = "",
-      .bit_width =   16 }, 
+      .bit_width =   16 },
 
     /* Padding to get 64 bytes frame */
     { .name = "padding",
