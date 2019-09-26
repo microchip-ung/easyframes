@@ -265,6 +265,7 @@ int argc_cmds(int argc, const char *argv[]) {
     cmd_t cmds[100] = {};
 
     while (i < argc && cmd_idx < 100) {
+        //po("%d, cmd[%d]\n", __LINE__, cmd_idx);
         res = argc_cmd(argc - i, argv + i, &cmds[cmd_idx]);
 
         if (res > 0) {

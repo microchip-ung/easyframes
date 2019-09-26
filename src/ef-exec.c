@@ -249,15 +249,14 @@ int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
             }
 
             if (match) {
-                po("RX-OK  %16s: ", resources[i].cmd->arg0);
-                if (resources[i].cmd->name) {
-                    po("name %s", resources[i].cmd->name);
+                if (cmd_ptr->name) {
+                    po("name %s", cmd_ptr->name);
                 } else {
                     print_hex_str(1, b->data, b->size);
-                    if (resources[i].cmd->frame_mask_buf) {
+                    if (cmd_ptr->frame_mask_buf) {
                         po("RX-OK MASK:              ");
-                        print_hex_str(1, resources[i].cmd->frame_mask_buf->data,
-                                      resources[i].cmd->frame_mask_buf->size);
+                        print_hex_str(1, cmd_ptr->frame_mask_buf->data,
+                                      cmd_ptr->frame_mask_buf->size);
                         po("\n");
                     }
                 }
