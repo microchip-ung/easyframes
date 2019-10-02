@@ -255,7 +255,7 @@ static field_t RESPONSE_FIELDS[] = {
     /* Padding to get 64 bytes frame */
     { .name = "padding",
       .help = "",
-      .bit_width =  2*8 },
+      .bit_width =  6*8 },
 };
 
 static hdr_t HDR_RESPONSE = {
@@ -275,6 +275,7 @@ void ts_init() {
     def_val(&HDR_SYNC, "ots-secondsField", "0");
     def_val(&HDR_SYNC, "ots-nanosecondsField", "0");
 
+    def_offset(&HDR_REQUEST);
     def_val(&HDR_REQUEST, "hdr-messageType", "1");
     def_val(&HDR_REQUEST, "hdr-messageLength", "44");
     def_val(&HDR_REQUEST, "ots-secondsField", "0");
