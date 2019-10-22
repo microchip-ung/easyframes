@@ -6,9 +6,10 @@
 #include <stdio.h>
 
 int argc_frame(int argc, const char *argv[], frame_t *f) {
-    int i, j, res;
+    int i, j, res, offset;
     hdr_t *h;
 
+    offset = 0;
     frame_reset(f);
 
     i = 0;
@@ -44,11 +45,12 @@ int argc_frame(int argc, const char *argv[], frame_t *f) {
 
         //po("Parsing hdr: %s: %p\n", h->name, h);
         //po("%d, i=%d/%d %s\n", __LINE__, i, argc, argv[i]);
-        res = h->parser(f, h, argc - i, argv + i);
+        res = h->parser(f, h, offset, argc - i, argv + i);
         if (res < 0) {
             return res;
         }
 
+        offset += h->size;
         i += res;
         //po("%d, i=%d/%d %s\n", __LINE__, i, argc, argv[i]);
     }

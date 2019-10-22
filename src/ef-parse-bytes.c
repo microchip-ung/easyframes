@@ -329,7 +329,7 @@ buf_t *parse_bytes(const char *s, int bytes) {
     return 0;
 }
 
-buf_t *parse_var_bytes_hex(const char *s) {
+buf_t *parse_var_bytes_hex(const char *s, int min_size) {
     buf_t *b;
     uint8_t *p_o, tmp;
     const char *p;
@@ -370,7 +370,11 @@ buf_t *parse_var_bytes_hex(const char *s) {
         return 0;
     }
 
-    b = balloc(cnt_nipple / 2);
+    if (cnt_nipple / 2 > min_size) {
+        b = balloc(cnt_nipple / 2);
+    } else {
+        b = balloc(min_size);
+    }
 
     p = s;
     p_o = b->data;
@@ -407,7 +411,7 @@ buf_t *parse_var_bytes_hex(const char *s) {
     return b;
 }
 
-buf_t *parse_field_hex(const char *s, int bytes)
+buf_t *parse_field_hex(struct hdr *hdr, int hdr_offset, const char *s, int bytes)
 {
     buf_t *b;
     buf_t *b_ret = 0;
@@ -417,7 +421,7 @@ buf_t *parse_field_hex(const char *s, int bytes)
         po("%s:%d: ERROR: Memory alloc\n", __FILE__, __LINE__);
         return 0;
     }
-    b = parse_var_bytes_hex(s);
+    b = parse_var_bytes_hex(s, 0);
     if (!b) {
         bfree(b_ret);
         return 0;
@@ -551,7 +555,7 @@ int parse_var_bytes_(buf_t **b_out, int argc, const char *argv[]) {
             return -1;
         }
 
-        b = parse_var_bytes_hex(argv[i]);
+        b = parse_var_bytes_hex(argv[i], 0);
         i += 1;
 
     } else if (strcmp(argv[i], "ascii") == 0) {

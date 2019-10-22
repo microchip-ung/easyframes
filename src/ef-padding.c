@@ -1,6 +1,7 @@
 #include "ef.h"
 
-static int padding_parser(frame_t *f, hdr_t *hdr, int argc, const char *argv[]) {
+static int padding_parser(frame_t *f, hdr_t *hdr, int offset,
+                          int argc, const char *argv[]) {
     uint32_t len = 0;
 
 

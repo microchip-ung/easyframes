@@ -308,7 +308,8 @@ hdr_t *frame_clone_and_push_hdr(frame_t *f, hdr_t *h) {
     return new_hdr;
 }
 
-int hdr_parse_fields(frame_t *frame, hdr_t *hdr, int argc, const char *argv[]) {
+int hdr_parse_fields(frame_t *frame, struct hdr *hdr, int offset,
+                     int argc, const char *argv[]) {
     int i, j;
     field_t *f;
     int field_ignore = 0;
@@ -363,7 +364,7 @@ int hdr_parse_fields(frame_t *frame, hdr_t *hdr, int argc, const char *argv[]) {
 
         //po("Assigned value for %s\n", f->name);
         if (f->parser != NULL) {
-            f->val = f->parser(argv[i], BIT_TO_BYTE(f->bit_width));
+            f->val = f->parser(hdr, offset, argv[i], BIT_TO_BYTE(f->bit_width));
         } else {
             f->val = parse_bytes(argv[i], BIT_TO_BYTE(f->bit_width));
         }
@@ -554,6 +555,7 @@ void payload_init();
 void padding_init();
 void oam_init();
 void ts_init();
+void profinet_init();
 
 void init() __attribute__ ((constructor));
 void init() {
@@ -570,6 +572,7 @@ void init() {
     padding_init();
     oam_init();
     ts_init();
+    profinet_init();
 }
 
 void ifh_uninit();
@@ -585,6 +588,7 @@ void payload_uninit();
 void padding_uninit();
 void oam_uninit();
 void ts_uninit();
+void profinet_uninit();
 
 void uninit() __attribute__ ((destructor));
 void uninit() {
@@ -601,5 +605,6 @@ void uninit() {
     padding_uninit();
     oam_uninit();
     ts_uninit();
+    profinet_uninit();
 }
 

@@ -365,7 +365,7 @@ int pcap_append(cmd_t *c) {
 
     memset(&pkt, 0, sizeof(pkt));
     pkt.caplen = c->frame_buf->size;
-    pkt.len = c->frame_buf->size + 4;
+    pkt.len = c->frame_buf->size;
     pcap_dump((u_char *)pcapfile, &pkt, c->frame_buf->data);
 
     pcap_dump_close(pcapfile);

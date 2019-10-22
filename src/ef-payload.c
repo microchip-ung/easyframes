@@ -1,6 +1,7 @@
 #include "ef.h"
 
-static int payload_parser(frame_t *frame, hdr_t *hdr, int argc, const char *argv[]) {
+static int payload_parser(frame_t *frame, hdr_t *hdr, int offset,
+                          int argc, const char *argv[]) {
     int res;
     buf_t *b = 0;
 
@@ -41,3 +42,4 @@ void payload_uninit() {
     uninit_frame_data(&HDR_PAYLOAD);
     hdr_tmpls[HDR_TMPL_PAYLOAD] = 0;
 }
+

@@ -97,8 +97,10 @@ struct frame;
 typedef int (*frame_fill_defaults_t)(struct frame *, int stack_idx);
 
 struct hdr;
-typedef int (*hdr_parse_t)(struct frame *frame, struct hdr *hdr, int argc, const char *argv[]);
-typedef buf_t *(*field_parse_t)(const char *s, int bytes);
+typedef int (*hdr_parse_t)(struct frame *frame, struct hdr *hdr, int offset,
+                           int argc, const char *argv[]);
+typedef buf_t *(*field_parse_t)(struct hdr *hdr, int hdr_offset, const char *s,
+                                int bytes);
 
 typedef struct {
     const char *name;
@@ -149,10 +151,11 @@ void frame_destruct(frame_t *f);
 GEN_ALLOC_CLONE_FREE(frame);
 
 buf_t *parse_bytes(const char *s, int bytes);
-buf_t *parse_field_hex(const char *s, int bytes);
+buf_t *parse_field_hex(struct hdr *hdr, int hdr_offset, const char *s, int bytes);
 int parse_uint8(const char *s, uint8_t *o);
 int parse_uint32(const char *s, uint32_t *o);
 int parse_var_bytes(buf_t **b, int argc, const char *argv[]);
+buf_t *parse_var_bytes_hex(const char *s, int min_size);
 
 field_t *find_field(hdr_t *h, const char *field);
 
@@ -163,7 +166,8 @@ hdr_t *frame_clone_and_push_hdr(frame_t *f, hdr_t *h);
 
 int hdr_copy_to_buf(hdr_t *hdr, int offset, buf_t *buf);
 int hdr_copy_to_buf_mask(hdr_t *hdr, int offset, buf_t *buf);
-int hdr_parse_fields(frame_t *f, hdr_t *hdr, int argc, const char *argv[]);
+int hdr_parse_fields(frame_t *f, hdr_t *hdr, int offset,
+                     int argc, const char *argv[]);
 
 buf_t *frame_to_buf(frame_t *f);
 buf_t *frame_mask_to_buf(frame_t *f);
@@ -212,6 +216,7 @@ typedef enum {
     HDR_TMPL_TS_SYNC,
     HDR_TMPL_TS_REQUEST,
     HDR_TMPL_TS_RESPONSE,
+    HDR_TMPL_PNET_RTC,
 
     HDR_TMPL_SIZE,
 } hdr_tmpl_t;
