@@ -41,7 +41,7 @@ static buf_t *profinet_data_parser(hdr_t *hdr, int hdr_offset, const char *s,
 static field_t PNET_RTC_FIELDS[] = {
     [PNET_RTC_FIELD_FRAMEID] = {
         .name = "frameid",
-        .help = "Profinet frame ID. For RTC this should be in the range: x-y.",
+        .help = "Profinet frame ID. See IEC CDV 61158-6-10 section 4.2.2.6.",
         .bit_width = 16,
     },
     [PNET_RTC_FIELD_DATA] = {
@@ -54,48 +54,48 @@ static field_t PNET_RTC_FIELDS[] = {
 
     [PNET_RTC_FIELD_CYCLE] = {
         .name = "cycle",
-        .help = "",
+        .help = "Cycle counter",
         .bit_width = 16
     },
 
     [PNET_RTC_FIELD_DATA_STATUS_IGN] = {
         .name = "ignore",
-        .help = "",
+        .help = "Data status: Ignore bit. Default 0",
         .bit_width = 1
     },
     [PNET_RTC_FIELD_DATA_STATUS_RESERVED2] = {
         .name = "reserved2",
-        .help = "",
+        .help = "Data status: Reserved bit 2. Default 0",
         .bit_width = 1
     },
     [PNET_RTC_FIELD_DATA_STATUS_PROBLEM] = {
         .name = "station-ok",
-        .help = "",
+        .help = "Data status: station problem idendicator (default 1, which means no problem)",
         .bit_width = 1
     },
     [PNET_RTC_FIELD_DATA_STATUS_PROVIDER] = {
         .name = "provider-state-run",
-        .help = "",
+        .help = "Data status: provider state Run:1/Stop:0. Default 1",
         .bit_width = 1
     },
     [PNET_RTC_FIELD_DATA_STATUS_RESERVED1] = {
         .name = "reserved1",
-        .help = "",
+        .help = "Data status: Reserved bit 1. Default 0",
         .bit_width = 1
     },
     [PNET_RTC_FIELD_DATA_STATUS_VALID] = {
         .name = "data-valid",
-        .help = "",
+        .help = "Data status: data valid. Default 1",
         .bit_width = 1
     },
     [PNET_RTC_FIELD_DATA_STATUS_REDUNDANCY] = {
         .name = "redundancy",
-        .help = "",
+        .help = "Data status: Redundancy bit. Default 1",
         .bit_width = 1
     },
     [PNET_RTC_FIELD_DATA_STATUS_PRIMARY] = {
         .name = "primary",
-        .help = "",
+        .help = "Data status: State Primary:1/Backup:0. Default 0",
         .bit_width = 1
     },
     [PNET_RTC_FIELD_TRANSFER_STATUS] = {
