@@ -50,6 +50,146 @@ static struct has_char has_chars[] = {
     {HAS_COLON,   ":" },
 };
 
+buf_t *parse_bytes_binary(const char *s, int size) {
+    buf_t *b;
+    uint8_t *p_o, tmp;
+    const char *p;
+    int cnt_bits, has_others, has_align_issues, valid;
+
+    p = s;
+    cnt_bits = 0;
+    has_others = 0;
+    has_align_issues = 0;
+
+    for (; *p; ++p) {
+        if (*p == '0' || *p == '1') {
+            cnt_bits++;
+        } else {
+            has_others = 1;
+        }
+    }
+
+    if (cnt_bits % 8 != 0) {
+        has_align_issues = 1;
+    }
+
+    if (has_others || cnt_bits == 0) {
+        po("ERROR: Could not parse >%s< as a hex string\n", s);
+        return 0;
+    }
+
+    if (has_align_issues) {
+        po("ERROR: hex strings must be byte aligned, and if delimiters are then they must also be byte aligned.\n");
+        return 0;
+    }
+
+    b = balloc(size);
+
+    p = s;
+    p_o = b->data + size - cnt_bits / 8;
+    cnt_bits = 0;
+
+    for (; *p; ++p) {
+        if (*p == '0' || *p == '1') {
+            valid = 1;
+            tmp = *p - '0';
+        } else {
+            valid = 0;
+        }
+
+        if (valid) {
+            *p_o |= tmp;
+            cnt_bits++;
+
+            if (cnt_bits % 8 == 0)
+                p_o ++;
+            else
+                *p_o <<= 1;
+        }
+    }
+
+    return b;
+}
+
+buf_t *parse_bytes_hex(const char *s, int size) {
+    buf_t *b;
+    uint8_t *p_o, tmp;
+    const char *p;
+    int cnt_nipple, has_others, has_align_issues, valid;
+
+    p = s;
+    cnt_nipple = 0;
+    has_others = 0;
+    has_align_issues = 0;
+
+    for (; *p; ++p) {
+        if (*p >= '0' && *p <= '9') {
+            cnt_nipple ++;
+        } else if (*p >= 'a' && *p <= 'f') {
+            cnt_nipple ++;
+        } else if (*p >= 'A' && *p <= 'F') {
+            cnt_nipple ++;
+        } else if (*p == '.' || *p == ':' || *p == '-' || *p == '_') {
+            if (cnt_nipple % 2 != 0) {
+                has_align_issues = 1;
+            }
+        } else {
+            has_others = 1;
+        }
+    }
+
+    if (cnt_nipple % 2 != 0) {
+        has_align_issues = 1;
+    }
+
+    if (has_others || cnt_nipple == 0) {
+        po("ERROR: Could not parse >%s< as a hex string\n", s);
+        return 0;
+    }
+
+    if (has_align_issues) {
+        po("ERROR: hex strings must be byte aligned, and if delimiters are then they must also be byte aligned.\n");
+        return 0;
+    }
+
+    b = balloc(size);
+
+    p = s;
+    p_o = b->data + size - cnt_nipple / 2;
+    cnt_nipple = 0;
+
+    for (; *p; ++p) {
+        if (*p >= '0' && *p <= '9') {
+            valid = 1;
+            tmp = *p - '0';
+
+        } else if (*p >= 'a' && *p <= 'f') {
+            valid = 1;
+            tmp = (*p - 'a') + 10;
+
+        } else if (*p >= 'A' && *p <= 'F') {
+            valid = 1;
+            tmp = (*p - 'A') + 10;
+
+        } else {
+            valid = 0;
+        }
+
+        if (valid) {
+            *p_o |= tmp;
+            cnt_nipple++;
+
+            if (cnt_nipple % 2 == 1)
+                *p_o <<= 4;
+            else
+                p_o++;
+        }
+    }
+
+    return b;
+}
+
+
 buf_t *parse_bytes(const char *s, int bytes) {
     buf_t *b;
     int base, s_size = strlen(s);
@@ -130,6 +270,13 @@ buf_t *parse_bytes(const char *s, int bytes) {
         memcpy(b->data, o, bytes);
 
         return b;
+    } else if (base) {
+        if (base == 16) {
+            return parse_bytes_hex(data_begin, bytes);
+        }
+        if (base == 2) {
+            return parse_bytes_binary(data_begin, bytes);
+        }
     }
 
     //po("line: %d %d %d\n", __LINE__, bytes, has_other);

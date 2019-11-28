@@ -87,6 +87,13 @@ TEST_CASE("parse_bytes", "[parse_bytes]" ) {
     CHECK(hexstr(parse_bytes("0B::5", 6)) == "0b0000000005");
     CHECK(hexstr(parse_bytes("B0::5", 6)) == "b00000000005");
 
+    CHECK(hexstr(parse_bytes("::", 16)) == "00000000000000000000000000000000");
+    CHECK(hexstr(parse_bytes("0x3311ff", 16)) == "000000000000000000000000003311ff");
+    CHECK(hexstr(parse_bytes("0x11000022", 12)) == "000000000000000011000022");
+    CHECK(hexstr(parse_bytes("0b00000001", 12)) == "000000000000000000000001");
+    CHECK(hexstr(parse_bytes("0b00000101", 12)) == "000000000000000000000005");
+    CHECK(hexstr(parse_bytes("0b1000000000000101", 12)) == "000000000000000000008005");
+
         // ::      -> 00:00:00:00:00:00
         // ::1     -> 00:00:00:00:00:01
         // 1::     -> 01:00:00:00:00:00
