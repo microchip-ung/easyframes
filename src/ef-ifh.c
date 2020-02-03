@@ -1151,6 +1151,150 @@ static hdr_t HDR_EFH_CRCL = {
     .parser = hdr_parse_fields,
 };
 
+static field_t IFH_MAS_FIELDS[] = {
+    { .name = "ts",
+      .help = "Arrival time stamp",
+      .bit_width = 32 },
+    { .name = "bypass",
+      .help = "Skip analyzer processing (injection)",
+      .bit_width = 1 },
+    { .name = "masq",
+      .help = "Enable masquerading (injection)",
+      .bit_width = 1 },
+    { .name = "masq-port",
+      .help = "Masquerading port (injection)",
+      .bit_width = 4 },
+    { .name = "resv-inj",
+      .help = "Reserved field(injection)",
+      .bit_width = 8 },
+    { .name = "len",
+      .help = "Length (extraction)",
+      .bit_offset = 32,
+      .bit_width = 14 },
+    { .name = "smallc",
+      .help = "Small Cell",
+      .bit_width = 2 },
+    { .name = "rtag48",
+      .help = "R-tag removed",
+      .bit_width = 1 },
+    { .name = "rtag",
+      .help = "R-tag present",
+      .bit_width = 1 },
+    { .name = "ct",
+      .help = "Cut-through",
+      .bit_width = 1 },
+    { .name = "rew-cmd",
+      .help = "Rewriter command",
+      .bit_width = 10 },
+    { .name = "rew-oam",
+      .help = "Rewriter OAM",
+      .bit_width = 1 },
+    { .name = "oam-type",
+      .help = "OAM type",
+      .bit_width = 3 },
+    { .name = "fcs-upd",
+      .help = "FCS update",
+      .bit_width = 1 },
+    { .name = "dscp",
+      .help = "DSCP",
+      .bit_width = 6 },
+    { .name = "dp",
+      .help = "Drop Precedence",
+      .bit_width = 1 },
+    { .name = "rtp-id",
+      .help = "RTP Identifier",
+      .bit_width = 9 },
+    { .name = "rtp-subid",
+      .help = "RTP MRPD flow",
+      .bit_width = 1},
+    { .name = "rte-inb-upd",
+      .help = "RTE inbound update",
+      .bit_width = 1 },
+    { .name = "pn-data-status",
+      .help = "Profinet data status",
+      .bit_width = 8 },
+    { .name = "pn-tf-status",
+      .help = "Profinet transfer status",
+      .bit_width = 1 },
+    { .name = "pn-cc",
+      .help = "Profinet cycle counter",
+      .bit_width = 16 },
+    { .name = "pop-cnt",
+      .help = "VLAN tag pop count",
+      .bit_width = 2 },
+    { .name = "etype-offs",
+      .help = "Number of tags before Ethernet Type",
+      .bit_width = 2 },
+    { .name = "src-port",
+      .help = "Source port",
+      .bit_width = 4 },
+    { .name = "tag-type",
+      .help = "Tag information's associated Tag Protocol Identifier (TPID)",
+      .bit_width = 1 },
+    { .name = "pcp",
+      .help = "Classified PCP",
+      .bit_width = 3 },
+    { .name = "dei",
+      .help = "Classified DEI",
+      .bit_width = 1 },
+    { .name = "vid",
+      .help = "Classified VID",
+      .bit_width = 12 },
+    { .name = "qos-class",
+      .help = "Classified QoS class",
+      .bit_width = 3 },
+    { .name = "cpuq",
+      .help = "CPU extraction queue mask",
+      .bit_width = 8 },
+    { .name = "lrn-flags",
+      .help = "Learn flags",
+      .bit_width = 2 },
+    { .name = "sflow-id",
+      .help = "SFlow sampling ID",
+      .bit_width = 4 },
+    { .name = "acl-hit",
+      .help = "ACL hit flag",
+      .bit_width = 1 },
+    { .name = "acl-id",
+      .help = "ACL ID",
+      .bit_width = 6 },
+    { .name = "isdx",
+      .help = "Classified ISDX",
+      .bit_width = 8 },
+    { .name = "dest",
+      .help = "Destination set",
+      .bit_width = 9 },
+    { .name = "flood",
+      .help = "Storm policer",
+      .bit_width = 2 },
+    { .name = "seq-no",
+      .help = "Sequence number",
+      .bit_width = 16 },
+    { .name = "seq-op",
+      .help = "Sequence operation",
+      .bit_width = 2 },
+    { .name = "ipv",
+      .help = "Internal priority value",
+      .bit_width = 3 },
+    { .name = "afi",
+      .help = "Injected into AFI",
+      .bit_width = 1 },
+    { .name = "aged",
+      .help = "Ageing value",
+      .bit_width = 2},
+    { .name = "resv",
+      .help = "Reserved field",
+      .bit_width = 23 },
+};
+
+static hdr_t HDR_IFH_MAS = {
+    .name = "ifh-mas",
+    .help = "Internal Frame Header for Maserati",
+    .fields = IFH_MAS_FIELDS,
+    .fields_size = sizeof(IFH_MAS_FIELDS) / sizeof(IFH_MAS_FIELDS[0]),
+    .parser = hdr_parse_fields,
+};
+
 void ifh_init() {
     def_offset(&HDR_SP_OC1);
     def_val(&HDR_SP_OC1, "et",   "0x8880");
@@ -1189,6 +1333,8 @@ void ifh_init() {
     def_offset(&HDR_EFH_CRCL);
     def_val(&HDR_EFH_CRCL, "signature", "0xff");
 
+    def_offset(&HDR_IFH_MAS);
+
     hdr_tmpls[HDR_TMPL_SP_OC1] =  &HDR_SP_OC1;
     hdr_tmpls[HDR_TMPL_LP_OC1] =  &HDR_LP_OC1;
     hdr_tmpls[HDR_TMPL_IFH_OC1] = &HDR_IFH_OC1;
@@ -1199,6 +1345,7 @@ void ifh_init() {
     hdr_tmpls[HDR_TMPL_IFH_FA] =  &HDR_IFH_FA;
     hdr_tmpls[HDR_TMPL_IFH_CRCL] = &HDR_IFH_CRCL;
     hdr_tmpls[HDR_TMPL_EFH_CRCL] = &HDR_EFH_CRCL;
+    hdr_tmpls[HDR_TMPL_IFH_MAS] =  &HDR_IFH_MAS;
 }
 
 void ifh_uninit() {
@@ -1212,6 +1359,7 @@ void ifh_uninit() {
     uninit_frame_data(&HDR_IFH_FA);
     uninit_frame_data(&HDR_IFH_CRCL);
     uninit_frame_data(&HDR_EFH_CRCL);
+    uninit_frame_data(&HDR_IFH_MAS);
 
     hdr_tmpls[HDR_TMPL_SP_OC1] = 0;
     hdr_tmpls[HDR_TMPL_LP_OC1] = 0;
@@ -1223,4 +1371,5 @@ void ifh_uninit() {
     hdr_tmpls[HDR_TMPL_IFH_FA] = 0;
     hdr_tmpls[HDR_TMPL_IFH_CRCL] = 0;
     hdr_tmpls[HDR_TMPL_EFH_CRCL] = 0;
+    hdr_tmpls[HDR_TMPL_IFH_MAS] = 0;
 }
