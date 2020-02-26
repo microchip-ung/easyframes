@@ -33,7 +33,7 @@ static buf_t *profinet_data_parser(hdr_t *hdr, int hdr_offset, const char *s,
         offset = hdr->fields[i].bit_offset + hdr->fields[i].bit_width;
     }
 
-    hdr->size = offset/8;
+    hdr->size = offset / 8;
 
     return b;
 }
@@ -41,23 +41,27 @@ static buf_t *profinet_data_parser(hdr_t *hdr, int hdr_offset, const char *s,
 static field_t PNET_RTC_FIELDS[] = {
     [PNET_RTC_FIELD_FRAMEID] = {
         .name = "frameid",
-        .help = "Profinet frame ID. See IEC CDV 61158-6-10 section 4.2.2.6.",
+        .help = "Profinet frame ID. Common used ranges:\n"
+                "                                0x0000-0x00FF Time-aware==1. RT_CLASS_STREAM    Multicast CRs\n"
+                "                                0x0100-0x04FF Time-aware==1. RT_CLASS_STREAM    Unicast (input or output CRs)\n"
+                "                                0x0100-0x06FF Time-aware==0. RT_CLASS_3 (RED)   Uni/multi-cast non-redundant\n"
+                "                                0x0700-0x0FFF Time-aware==0. RT_CLASS_3 (RED)   Uni/multi-cast redundant\n"
+                "                                0x8000-0xBBFF                RT_CLASS_1 (GREEN) Unicast non-redundant\n"
+                "                                0xBC00-0xBFFF                RT_CLASS_1 (GREEN) Multicast non-redundant\n"
+                "                                See IEC CDV 61158-6-10 section 4.2.2.6 for more details",
         .bit_width = 16,
     },
     [PNET_RTC_FIELD_DATA] = {
         .name = "data",
         .help = "Variable length data. The encoding of this data depends on configuration",
-        .bit_offset = 16,
-        .bit_width = 0,
+        .bit_width = 40 * 8,
         .parser = profinet_data_parser,
     },
-
     [PNET_RTC_FIELD_CYCLE] = {
         .name = "cycle",
         .help = "Cycle counter",
         .bit_width = 16
     },
-
     [PNET_RTC_FIELD_DATA_STATUS_IGN] = {
         .name = "ignore",
         .help = "Data status: Ignore bit. Default 0",
@@ -116,12 +120,14 @@ static hdr_t HDR_PNET_RTC = {
 
 
 void profinet_init() {
-    hdr_tmpls[HDR_TMPL_PNET_RTC] =  &HDR_PNET_RTC;
-
+    def_offset(&HDR_PNET_RTC);
     def_val(&HDR_PNET_RTC, "station-ok", "1");
     def_val(&HDR_PNET_RTC, "provider-state-run", "1");
     def_val(&HDR_PNET_RTC, "data-valid", "1");
     def_val(&HDR_PNET_RTC, "primary", "1");
+    def_val(&HDR_PNET_RTC, "data", "00");
+
+    hdr_tmpls[HDR_TMPL_PNET_RTC] =  &HDR_PNET_RTC;
 }
 
 void profinet_uninit() {
