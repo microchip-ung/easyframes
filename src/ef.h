@@ -218,6 +218,7 @@ typedef enum {
     HDR_TMPL_TS_REQUEST,
     HDR_TMPL_TS_RESPONSE,
     HDR_TMPL_PNET_RTC,
+    HDR_TMPL_OPC_UA,
 
     HDR_TMPL_SIZE,
 } hdr_tmpl_t;

@@ -556,6 +556,7 @@ void padding_init();
 void oam_init();
 void ts_init();
 void profinet_init();
+void opcua_init();
 
 void init() __attribute__ ((constructor));
 void init() {
@@ -572,7 +573,7 @@ void init() {
     padding_init();
     oam_init();
     ts_init();
-    profinet_init();
+    opcua_init();
 }
 
 void ifh_uninit();
@@ -589,6 +590,7 @@ void padding_uninit();
 void oam_uninit();
 void ts_uninit();
 void profinet_uninit();
+void opcua_uninit();
 
 void uninit() __attribute__ ((destructor));
 void uninit() {
@@ -606,5 +608,6 @@ void uninit() {
     oam_uninit();
     ts_uninit();
     profinet_uninit();
+    opcua_uninit();
 }
 
