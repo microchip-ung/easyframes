@@ -573,6 +573,7 @@ void init() {
     padding_init();
     oam_init();
     ts_init();
+    profinet_init();
     opcua_init();
 }
 
