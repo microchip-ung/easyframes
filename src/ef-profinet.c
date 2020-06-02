@@ -94,12 +94,12 @@ static field_t PNET_RTC_FIELDS[] = {
     },
     [PNET_RTC_FIELD_DATA_STATUS_REDUNDANCY] = {
         .name = "redundancy",
-        .help = "Data status: Redundancy bit. Default 1",
+        .help = "Data status: Redundancy bit. Default 0",
         .bit_width = 1
     },
     [PNET_RTC_FIELD_DATA_STATUS_PRIMARY] = {
         .name = "primary",
-        .help = "Data status: State Primary:1/Backup:0. Default 0",
+        .help = "Data status: State Primary:1/Backup:0. Default 1",
         .bit_width = 1
     },
     [PNET_RTC_FIELD_TRANSFER_STATUS] = {
