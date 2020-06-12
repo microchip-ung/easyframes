@@ -30,6 +30,7 @@ add_library(libef STATIC
     src/ef-ipv4.c
     src/ef-ipv6.c
     src/ef-oam.c
+    src/ef-mrp.c
     src/ef-opcua.c
     src/ef-padding.c
     src/ef-parse-bytes.c
