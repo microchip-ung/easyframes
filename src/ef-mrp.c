@@ -133,7 +133,7 @@ static field_t MRP_PROP_NACK_FIELDS[] = {
 };
 
 static hdr_t HDR_MRP_PROP_NACK = {
-    .name = "mrp_prop_NACK",
+    .name = "mrp_prop_nack",
     .help = "MRP Propagate/MgrNAck frame",
     .type = 0x88E3,
     .fields = MRP_PROP_NACK_FIELDS,
