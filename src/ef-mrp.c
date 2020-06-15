@@ -53,6 +53,9 @@ static field_t MRP_TST_FIELDS[] = {
     { .name = "e_length",
       .help = "",
       .bit_width =  8 },
+    { .name = "padding",
+      .help = "",
+      .bit_width =  20*8 },
 };
 
 static hdr_t HDR_MRP_TST = {
