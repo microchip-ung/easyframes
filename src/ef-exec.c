@@ -1,5 +1,6 @@
 #include "ef.h"
 
+#include <poll.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <net/if.h>
@@ -119,16 +120,13 @@ int add_cmd_to_resource(cmd_t *c, int res_max, int res_valid,
     return 1;
 }
 
-int rfds_wfds_fill(cmd_socket_t *resources, int res_valid, fd_set *rfds,
-                   fd_set *wfds) {
+int timeval_to_ms(const struct timeval *tv) {
+    return (tv->tv_sec * 1000) + (tv->tv_usec / 1000);
+}
+
+int rfds_wfds_fill(cmd_socket_t *resources, int res_valid, struct pollfd *pfd) {
     cmd_t *cmd_ptr;
-    int i, fd_set_cnt, fd_max;
-
-    fd_max = 0;
-    fd_set_cnt = 0;
-
-    FD_ZERO(rfds);
-    FD_ZERO(wfds);
+    int i, max_index = -1;
 
     for (i = 0; i < res_valid; i++) {
         resources[i].has_rx = 0;
@@ -148,27 +146,28 @@ int rfds_wfds_fill(cmd_socket_t *resources, int res_valid, fd_set *rfds,
             cmd_ptr = cmd_ptr->next;
         }
 
+        pfd[i].events = 0;
         if (resources[i].has_rx) {
-            FD_SET(resources[i].fd, rfds);
-            fd_max = MAX(resources[i].fd, fd_max);
-            fd_set_cnt++;
+            pfd[i].events |= POLLIN;
         }
 
         if (resources[i].has_tx) {
-            FD_SET(resources[i].fd, wfds);
-            fd_max = MAX(resources[i].fd, fd_max);
-            fd_set_cnt++;
+            pfd[i].events |= POLLOUT;
+        }
+
+        if (resources[i].has_rx || resources[i].has_tx) {
+            pfd[i].fd = resources[i].fd;
+            max_index = i;
+        } else {
+            pfd[i].fd = -1;
         }
     }
 
-    if (fd_set_cnt)
-        return fd_max;
-
-    return -1;
+    return max_index;
 }
 
-int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
-                      fd_set *wfds) {
+int rfds_wfds_process(cmd_socket_t *resources, int res_valid,
+                      struct pollfd *pfds) {
     int i, res, match, old_size, tx_done;
     buf_t *b;
     cmd_t *cmd_ptr;
@@ -180,7 +179,7 @@ int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
         struct iovec iov = {};
         struct msghdr msg = {};
 
-        if (!FD_ISSET(resources[i].fd, rfds))
+        if (!(pfds[i].revents & POLLIN))
             continue;
 
         // read the frame, and try to match it
@@ -277,7 +276,7 @@ int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
     while(1) {
         tx_done = 1;
         for (i = 0; i < res_valid; i++) {
-            if (!FD_ISSET(resources[i].fd, wfds))
+            if (!(pfds[i].revents & POLLOUT))
                 continue;
 
             // TX the first not "done" frame.
@@ -377,10 +376,10 @@ int pcap_append(cmd_t *c) {
 
 int exec_cmds(int cnt, cmd_t *cmds) {
     struct timeval tv_now, tv_left, tv_begin, tv_end;
-    int i, res, fd_max, err = 0;
+    int i, res, idx_max, err = 0;
     int res_valid = 0;
     cmd_socket_t resources[100] = {};
-    fd_set rfds, wfds;
+    struct pollfd pfds[100] = {};
     cmd_t *cmd_ptr;
 
     // Print inventory of named frames
@@ -478,12 +477,12 @@ int exec_cmds(int cnt, cmd_t *cmds) {
     gettimeofday(&tv_begin, 0);
     timeradd(&tv_begin, &tv_left, &tv_end);
     while (1) {
-        fd_max = rfds_wfds_fill(resources, res_valid, &rfds, &wfds);
-        if (fd_max < 0) {
+        idx_max = rfds_wfds_fill(resources, res_valid, pfds);
+        if (idx_max < 0) {
             break;
         }
 
-        res = select(fd_max + 1, &rfds, &wfds, 0, &tv_left);
+        res = poll(pfds, idx_max + 1, timeval_to_ms(&tv_left));
         gettimeofday(&tv_now, 0);
         if (timercmp(&tv_now, &tv_end, >)) {
             break;
@@ -496,7 +495,7 @@ int exec_cmds(int cnt, cmd_t *cmds) {
             break;
         }
 
-        rfds_wfds_process(resources, res_valid, &rfds, &wfds);
+        rfds_wfds_process(resources, res_valid, pfds);
     }
 
     // close resources
