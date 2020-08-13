@@ -126,6 +126,7 @@ int str_pr_append(struct str *s, const char *fmt, ...) {
             s->buf_free += s->buf_alloc_step;
         } else {
             s->buf_valid += res;
+            s->buf_free -= res;
             return 0;
         }
     }
