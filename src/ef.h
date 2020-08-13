@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+#include <linux/if_packet.h>
 
 #include "version.h"
 
@@ -251,16 +252,33 @@ typedef struct cmd {
     frame_t    *frame;
     buf_t      *frame_buf;
     buf_t      *frame_mask_buf;
+
     int         done;
     uint32_t    repeat;
+    uint32_t    repeat_left;
+
+    int         ring_idx;
+    int         ring_buffer_initialized;
+    clock_t     tx_ts_start;
+    clock_t     tx_ts_end;
 } cmd_t;
 
 typedef struct {
-    int          fd;
-    int          has_rx;
-    int          has_tx;
-    cmd_t       *cmd;
-    int          rx_err_cnt;
+    struct tpacket_req3 req;
+    uint8_t *map;
+    struct iovec *blocks;
+} tpacket_ring;
+
+typedef struct {
+    int           fd;
+    int           has_rx;
+    int           has_tx;
+    cmd_t        *cmd;
+    int           rx_err_cnt;
+
+    uint8_t      *map;
+    tpacket_ring  tx_ring;
+    tpacket_ring  rx_ring;
 } cmd_socket_t;
 
 int exec_cmds(int cnt, cmd_t *cmds);

@@ -221,6 +221,8 @@ int argc_cmd(int argc, const char *argv[], cmd_t *c) {
             c->repeat = atoi(argv[i+1]);
             i += 2;
         }
+
+        c->repeat_left = c->repeat;
     }
 
     //po("%d, i=%d/%d %s\n", __LINE__, i, argc, argv[i]);
