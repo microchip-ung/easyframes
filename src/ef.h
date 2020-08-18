@@ -9,6 +9,8 @@
 extern "C" {
 #endif
 
+#define EF_VERSION "v0.1"
+
 #define DIV_ROUND(a, b) (1 + ((a - 1) / b))
 #define BIT_TO_BYTE(x) (DIV_ROUND(x, 8))
 

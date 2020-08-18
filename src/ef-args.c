@@ -77,6 +77,9 @@ void cmd_destruct(cmd_t *c) {
     memset(c, 0, sizeof(*c));
 }
 
+void print_version() {
+    po("ef version: %s\n", EF_VERSION);
+}
 
 void print_help() {
     po("Usage: ef [options] <command> args [<command> args]...\n");
@@ -85,6 +88,7 @@ void print_help() {
     po("optionally specify what frames it expect to receive.\n");
     po("\n");
     po("Options:\n");
+    po("  -v                    Print version.\n");
     po("  -h                    Top level help message.\n");
     po("  -t <timeout-in-ms>    When listening on an interface (rx),\n");
     po("     When listening on an interface (rx), the tool will always\n");
@@ -321,8 +325,12 @@ int TIME_OUT_MS = 100;
 int main_(int argc, const char *argv[]) {
     int opt;
 
-    while ((opt = getopt(argc, (char * const*)argv, "ht:c:")) != -1) {
+    while ((opt = getopt(argc, (char * const*)argv, "vht:c:")) != -1) {
         switch (opt) {
+            case 'v':
+                print_version();
+                return 0;
+
             case 'h':
                 print_help();
                 return -1;
