@@ -46,27 +46,6 @@ target_link_libraries(libef ${_LIBPCAP})
 add_executable(ef src/main.c) # todo, rename to main.c
 target_link_libraries(ef libef ${_LIBPCAP})
 
-add_executable(er src/er.c)
-
 add_executable(base64decode src/base64decode.c)
 
-install(TARGETS ef er base64decode DESTINATION bin)
-
-# TEST ONLY
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-
-add_executable(ef-tests
-    test/ef-test.cxx
-    test/ef-tests.cxx
-    test/test-ef-parse-bytes.cxx
-    test/ifh-ignore.cxx
-)
-
-target_link_libraries(ef-tests libef)
-
-include(CTest)
-add_test(ef-tests ./ef-tests)
-add_test(parser-tests.rb ${CMAKE_CURRENT_SOURCE_DIR}/test/parser-tests.rb)
-
+install(TARGETS ef base64decode DESTINATION bin)
