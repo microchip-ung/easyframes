@@ -78,7 +78,7 @@ void cmd_destruct(cmd_t *c) {
 }
 
 void print_version() {
-    po("ef version: %s\n", EF_VERSION);
+    po("ef version: %s\n", gGIT_VERSION);
 }
 
 void print_help() {

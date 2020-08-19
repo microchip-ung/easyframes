@@ -1,0 +1,4 @@
+#include "../src/version.h"
+
+const char* gGIT_VERSION = "@VERSION@";
+const char* gGIT_VERSION_SHORT = "@VERSION_SHORT@";
