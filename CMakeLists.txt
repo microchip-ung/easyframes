@@ -46,6 +46,4 @@ target_link_libraries(libef ${_LIBPCAP})
 add_executable(ef src/main.c) # todo, rename to main.c
 target_link_libraries(ef libef ${_LIBPCAP})
 
-add_executable(base64decode src/base64decode.c)
-
-install(TARGETS ef base64decode DESTINATION bin)
+install(TARGETS ef DESTINATION bin)
