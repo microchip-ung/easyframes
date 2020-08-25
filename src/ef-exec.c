@@ -28,11 +28,11 @@
 
 static clock_t SEND_TIME = 0;
 static clock_t POLL_TIME = 0;
-static const uint32_t block_size = 16 * 1024 * 1024;
-static const uint32_t frame_size = 2048;
-static const uint32_t block_count = 16;
+static uint32_t block_size;
+static const uint32_t frame_size = 16 * 1024;
+static const uint32_t block_count = 4;
 
-static const uint32_t frame_count = (block_size * block_count) / frame_size;
+static uint32_t frame_count;
 
 int setup_ring1(int fd, tpacket_ring *ring, int direction) {
     int res;
@@ -79,7 +79,7 @@ int setup_ring2(int fd, tpacket_ring *ring) {
 int ring_wait_for_init(tpacket_ring *ring) {
     int i, loop;
 
-    printf("Check that ring is being initialized\n");
+    //printf("Check that ring is being initialized\n");
     for (i = 0; i < ring->req.tp_frame_nr; ++i) {
         struct tpacket3_hdr * hdr;
         hdr = ((struct tpacket3_hdr *)(ring->map + (frame_size * i)));
@@ -102,7 +102,7 @@ int ring_wait_for_init(tpacket_ring *ring) {
         } while (loop);
     }
 
-    printf("ring setup ok\n");
+    //printf("ring setup ok\n");
     return 0;
 }
 
@@ -136,6 +136,7 @@ int raw_socket(cmd_socket_t *cmd_socket) {
     setup_ring1(s, &cmd_socket->rx_ring, PACKET_RX_RING);
     setup_ring1(s, &cmd_socket->tx_ring, PACKET_TX_RING);
 
+    cmd_socket->map_size = 2 * block_size * block_count;
     cmd_socket->map = mmap(NULL, 2 * block_size * block_count,
                            PROT_READ | PROT_WRITE, MAP_SHARED | MAP_LOCKED, s,
                            0);
@@ -244,8 +245,8 @@ int timeval_to_ms(const struct timeval *tv) {
     return (tv->tv_sec * 1000) + (tv->tv_usec / 1000);
 }
 
-int rfds_wfds_fill(cmd_socket_t *resources, int res_valid, struct pollfd *pfd,
-                   int *tx_pending) {
+static int rfds_wfds_fill(cmd_socket_t *resources, int res_valid,
+                          struct pollfd *pfd, int *tx_pending) {
     cmd_t *cmd_ptr;
     int i, max_index = -1;
 
@@ -288,7 +289,7 @@ int rfds_wfds_fill(cmd_socket_t *resources, int res_valid, struct pollfd *pfd,
     return max_index;
 }
 
-int rfds_wfds_process(cmd_socket_t *resources, int res_valid,
+static int rx_process(cmd_socket_t *resources, int res_valid,
                       struct pollfd *pfds) {
     int i, res, match, old_size;
     buf_t *b;
@@ -395,9 +396,109 @@ int rfds_wfds_process(cmd_socket_t *resources, int res_valid,
         bfree(b);
     }
 
-    //printf("line: %d\n", __LINE__);
+    return 0;
+}
 
-    //printf("line: %d\n", __LINE__);
+static int tx_ring_fill_one(cmd_socket_t *s, cmd_t *cmd, int idx) {
+    buf_t *b = cmd->frame_buf;
+    struct tpacket3_hdr *hdr;
+    uint8_t *pdu;
+    int j;
+
+    hdr = ((struct tpacket3_hdr *) (s->tx_ring.map + (frame_size * idx)));
+    pdu = ((uint8_t *) hdr) + (sizeof *hdr);
+
+    switch((volatile uint32_t)hdr->tp_status) {
+        case TP_STATUS_AVAILABLE:
+            for (j = 0; j < b->size; j++) {
+                pdu[j] = b->data[j];
+            }
+            hdr->tp_len = b->size;
+            return 0;
+
+        case TP_STATUS_WRONG_FORMAT:
+            printf("An error has occured during transfer\n");
+            return -1;
+
+        default:
+            printf("not ready\n");
+            return -1;
+    }
+}
+
+static int tx_ring_fill(cmd_socket_t *s, cmd_t *cmd) {
+    //printf("filling buffers: %d\n", __LINE__);
+    int i, total_filled = 0;
+
+    while (total_filled < frame_count) {
+        cmd_t *cmd_itr = cmd;
+
+        for (i = 0; i < cmd->stream_cnt; i++) {
+            tx_ring_fill_one(s, cmd_itr, cmd->ring_idx); // TODO, err handle
+
+            cmd->ring_idx++;
+            if (cmd->ring_idx >= frame_count)
+                cmd->ring_idx = 0;
+
+            cmd_itr->ring_buffer_initialized = 1;
+            cmd_itr = cmd_itr->next;
+            total_filled ++;
+        }
+    }
+
+    return cmd->stream_cnt;
+}
+
+static int tx_ring_req(cmd_socket_t *s, cmd_t *cmd) {
+    int i, ready = 0;
+    int limit = frame_count;
+    struct tpacket3_hdr *hdr;
+
+    if (limit > cmd->repeat_left) {
+        limit = cmd->repeat_left;
+    }
+
+    //printf("%d: Limit: %d\n", __LINE__, limit);
+    for (i = 0; i < limit; i++) {
+        hdr = ((struct tpacket3_hdr *)
+               (s->tx_ring.map + (frame_size * cmd->ring_idx)));
+
+        uint32_t status = (volatile uint32_t)hdr->tp_status;
+        if (status == TP_STATUS_AVAILABLE) {
+            hdr->tp_status = TP_STATUS_SEND_REQUEST;
+            ready++;
+
+            cmd->ring_idx++;
+            if (cmd->ring_idx >= frame_count)
+                cmd->ring_idx = 0;
+
+        } else if (status == TP_STATUS_SEND_REQUEST) {
+            //printf("send_request ring_idx=%d\n", ring_idx);
+            break;
+
+        } else if (status == TP_STATUS_SENDING) {
+            //printf("sending\n");
+            break;
+
+        } else if (status == TP_STATUS_WRONG_FORMAT) {
+            //printf("Wrong header\n");
+            break;
+
+        } else if (status == TP_STATUS_WRONG_FORMAT) {
+            //printf("unknown %d\n", hdr->tp_status);
+            break;
+        }
+    }
+
+    return ready;
+}
+
+static int tx_process(cmd_socket_t *resources, int res_valid,
+                      struct pollfd *pfds) {
+    int i, j, res;
+    int ready = 0;
+    cmd_t *cmd_ptr, *cmd_itr;
+
     for (i = 0; i < res_valid; i++) {
         //printf("line: %d\n", __LINE__);
         if (!(pfds[i].revents & POLLOUT))
@@ -405,134 +506,78 @@ int rfds_wfds_process(cmd_socket_t *resources, int res_valid,
 
         // TX the first not "done" frame.
         for (cmd_ptr = resources[i].cmd; cmd_ptr; cmd_ptr = cmd_ptr->next) {
-            //printf("line: %d\n", __LINE__);
             if (cmd_ptr->type != CMD_TYPE_TX)
                 continue;
 
             if (cmd_ptr->done)
                 continue;
 
-            b = cmd_ptr->frame_buf;
-            int ready = 0;
+            //printf("%d: Stream=%s, ridx=%d, cnt=%d\n", __LINE__,
+            //       cmd_ptr->stream_name, cmd_ptr->stream_ridx, cmd_ptr->stream_cnt);
+            if (unlikely(!cmd_ptr->ring_buffer_initialized)) {
+                tx_ring_fill(&resources[i], cmd_ptr);
 
-            if (!cmd_ptr->ring_buffer_initialized) {
-                //printf("filling buffers: %d\n", __LINE__);
-                int j, k;
-                struct tpacket3_hdr *hdr;
-                uint8_t *pdu;
+                // Lets all resources fill their frames before start sending.
+                break;
+            }
 
-                cmd_ptr->ring_buffer_initialized = 1;
-                for (k = 0; k < frame_count; k++) {
-                    hdr = ((struct tpacket3_hdr *)
-                           (resources[i].tx_ring.map + (frame_size * k)));
-                    pdu = ((uint8_t *) hdr) + (sizeof *hdr);
-                    switch((volatile uint32_t)hdr->tp_status) {
-                        case TP_STATUS_AVAILABLE:
-                            for (j = 0; j < b->size; j++) {
-                                pdu[j] = b->data[j];
-                            }
-                            hdr->tp_len = b->size;
-                            break;
 
-                        case TP_STATUS_WRONG_FORMAT:
-                            printf("An error has occured during transfer\n");
-                            break;
+            //printf("sending frames: %d\n", __LINE__);
+            if (cmd_ptr->tx_ts_start == 0) {
+                cmd_ptr->tx_ts_start = clock();
+            }
 
-                        default:
-                            printf("not ready\n");
-                            break;
-                    }
-                }
+            ready = tx_ring_req(&resources[i], cmd_ptr);
+
+            clock_t a = clock();
+            res = send(resources[i].fd, 0, 0, MSG_DONTWAIT);
+            clock_t b = clock();
+            SEND_TIME += b - a;
+
+            //if (res < 0) {
+            //    //printf("ERR: %d / %m (%d)\n", res, errno);
+            //    //usleep(100000);
+            //}
+
+            // Do not use "res" to count how many frames is being send! When
+            // send returns negative, it may have send some frames!
+            if (ready > cmd_ptr->repeat_left) {
+                cmd_ptr->repeat_left = 0;
+                printf("no match: %d %d\n", ready, cmd_ptr->repeat_left);
             } else {
-                //printf("sending frames: %d\n", __LINE__);
-                // TODO, get the ring_buffer_initialized out of fast path
+                cmd_ptr->repeat_left -= ready;
+            }
 
-                int k;
-                struct tpacket3_hdr *hdr;
+            //printf("Send2 return: no-frames=%8d ready=%8d left=%8d res=%d\n", no_frames, ready, cmd_ptr->repeat_left, res);
+            if (unlikely(res == 0 && cmd_ptr->repeat_left == 0)) {
+                double bits_per_frame = 0, t_us, mbps, mfps;
 
-                int limit = frame_count;
-                if (limit > cmd_ptr->repeat_left) {
-                    limit = cmd_ptr->repeat_left;
+                cmd_ptr->tx_ts_end = clock();
+
+                for (j = 0, cmd_itr = cmd_ptr; j < cmd_ptr->stream_cnt;
+                     j++, cmd_itr = cmd_itr->next) {
+                    bits_per_frame += (cmd_itr->frame_buf->size + 20) * 8;
                 }
+                t_us = (double)((cmd_ptr->tx_ts_end - cmd_ptr->tx_ts_start) / (CLOCKS_PER_SEC / 1000000));
+                mbps = ((double)cmd_ptr->repeat * bits_per_frame) / t_us;
+                mfps = (double)cmd_ptr->repeat / t_us;
 
-                if (cmd_ptr->tx_ts_start == 0) {
-                    cmd_ptr->tx_ts_start = clock();
-                }
-
-                for (k = 0; k < limit; k++) {
-                    hdr = ((struct tpacket3_hdr *)
-                           (resources[i].tx_ring.map + (frame_size * cmd_ptr->ring_idx)));
-
-                    uint32_t status = (volatile uint32_t)hdr->tp_status;
-                    if (status == TP_STATUS_AVAILABLE) {
-                        hdr->tp_status = TP_STATUS_SEND_REQUEST;
-                        ready++;
-
-                        cmd_ptr->ring_idx++;
-                        if (cmd_ptr->ring_idx >= frame_count)
-                            cmd_ptr->ring_idx = 0;
-
-                    } else if (status == TP_STATUS_SEND_REQUEST) {
-                        //printf("send_request ring_idx=%d\n", ring_idx);
-                        break;
-
-                    } else if (status == TP_STATUS_SENDING) {
-                        //printf("sending\n");
-                        break;
-
-                    } else if (status == TP_STATUS_WRONG_FORMAT) {
-                        //printf("Wrong header\n");
-                        break;
-
-                    } else if (status == TP_STATUS_WRONG_FORMAT) {
-                        //printf("unknown %d\n", hdr->tp_status);
-                        break;
-                    }
-                }
-
-                //usleep(500000);
-                {
-                    clock_t a = clock();
-                    res = send(resources[i].fd, 0, 0, MSG_DONTWAIT);
-                    clock_t b = clock();
-                    SEND_TIME += b - a;
-                }
-                //res = send(resources[i].fd, 0, 0, 0);
-
-                if (res < 0) {
-                    //printf("ERR: %d / %m (%d)\n", res, errno);
-                    //usleep(100000);
-                }
-
-                //int no_frames = res / b->size;
-                int no_frames = ready;
-                if (no_frames > cmd_ptr->repeat_left) {
-                    cmd_ptr->repeat_left = 0;
-                    printf("no match: %d %d\n", no_frames, cmd_ptr->repeat_left);
+                po("TX     %16s: ", cmd_ptr->arg0);
+                if (cmd_ptr->stream_name) {
+                    po("%s (%dframes, %8.0fus %3.3fmbps %3.3fmfsp)\n",
+                       cmd_ptr->stream_name, cmd_ptr->repeat, t_us, mbps, mfps);
+                } else if (cmd_ptr->name) {
+                    po("name %s", cmd_ptr->name);
                 } else {
-                    cmd_ptr->repeat_left -= no_frames;
+                    print_hex_str(1, cmd_ptr->frame_buf->data, cmd_ptr->frame_buf->size);
                 }
 
-                //printf("Send2 return: no-frames=%8d ready=%8d left=%8d res=%d\n", no_frames, ready, cmd_ptr->repeat_left, res);
-
-                if (res == 0 && cmd_ptr->repeat_left == 0) {
-                    cmd_ptr->tx_ts_end = clock();
-
-                    double bits_per_frame = (cmd_ptr->frame_buf->size + 20) * 8;
-                    double t_us = (double)((cmd_ptr->tx_ts_end - cmd_ptr->tx_ts_start) / (CLOCKS_PER_SEC / 1000000));
-                    double mbps = ((double)cmd_ptr->repeat * bits_per_frame) / t_us;
-                    double mfps = (double)cmd_ptr->repeat / t_us;
-
-                    po("TX     %16s: ", cmd_ptr->arg0);
-                    if (cmd_ptr->name) {
-                        po("name %s", cmd_ptr->name);
-                    } else {
-                        print_hex_str(1, b->data, b->size);
-                    }
-                    po(" time=%8.0f mbps=%3.3f mfsp=%3.3f\n", t_us, mbps, mfps);
-                    cmd_ptr->done = 1;
+                // Mark all frames in stream done
+                for (j = 0, cmd_itr = cmd_ptr; j < cmd_ptr->stream_cnt;
+                     j++, cmd_itr = cmd_itr->next) {
+                    cmd_itr->repeat_left = 0;
+                    cmd_itr->done = 1;
                 }
-
             }
 
             //printf("out-of-loop\n");
@@ -545,26 +590,12 @@ int rfds_wfds_process(cmd_socket_t *resources, int res_valid,
     return 0;
 }
 
-static int copy_cmd_by_name(const char *name, int cnt, cmd_t *cmds, cmd_t *dst) {
-    int i;
+int rfds_wfds_process(cmd_socket_t *resources, int res_valid,
+                      struct pollfd *pfds) {
+    rx_process(resources, res_valid, pfds);
+    tx_process(resources, res_valid, pfds);
 
-    for (i = 0; i < cnt; i++) {
-        if (cmds[i].type != CMD_TYPE_NAME)
-            continue;
-
-        if (!cmds[i].frame_buf || !cmds[i].name)
-            continue;
-
-        if (strcmp(cmds[i].name, name) != 0)
-            continue;
-
-        dst->frame = frame_clone(cmds[i].frame);
-        dst->frame_buf = bclone(cmds[i].frame_buf);
-        dst->frame_mask_buf = bclone(cmds[i].frame_mask_buf);
-        return 0;
-    }
-
-    return -1;
+    return 0;
 }
 
 #ifdef HAS_LIBPCAP
@@ -604,9 +635,49 @@ int pcap_append(cmd_t *c) {
 }
 #endif
 
+int gcd(int a, int b) {
+    if (a == 0)
+        return b;
+    return gcd(b % a, a);
+}
+
+int lcm(int a, int b) {
+    return (a * b) / gcd(a, b);
+}
+
+void cmd_socket_destruct(cmd_socket_t *p, int cnt) {
+    int i;
+
+    for (i = 0; i < cnt; i++) {
+        if (p->fd >= 0) {
+            close(p->fd);
+            p->fd = -1;
+        }
+
+        if (p->map) {
+            munmap(p->map, p->map_size);
+            p->map = 0;
+            p->map_size = 0;
+            p->tx_ring.map = 0;
+            p->rx_ring.map = 0;
+        }
+
+        if (p->tx_ring.blocks) {
+            free(p->tx_ring.blocks);
+            p->tx_ring.blocks = 0;
+        }
+
+        if (p->rx_ring.blocks) {
+            free(p->rx_ring.blocks);
+            p->rx_ring.blocks = 0;
+        }
+    }
+}
+
 int exec_cmds(int cnt, cmd_t *cmds) {
     struct timeval tv_now, tv_left, tv_begin, tv_end;
-    int i, res, idx_max, err = 0, tx_pending = 0;
+    int j, i, res, idx_max, err = 0, tx_pending = 0;
+    int stream_lcm = 0;
     int res_valid = 0;
     cmd_socket_t resources[100] = {};
     struct pollfd pfds[100] = {};
@@ -631,25 +702,41 @@ int exec_cmds(int cnt, cmd_t *cmds) {
         }
     }
 
-    // Pair named frames
+    // Print inventory of streams
     for (i = 0; i < cnt; i++) {
-        if (cmds[i].type == CMD_TYPE_NAME)
+        if (cmds[i].type != CMD_TYPE_STREAM)
             continue;
 
-        if (!cmds[i].name)
-            continue;
-
-        if (cmds[i].frame_buf)
-            continue;
-
-        if (copy_cmd_by_name(cmds[i].name, cnt, cmds, &cmds[i]) != 0) {
-            pe("No frame in inventory called %s\n", cmds[i].name);
-            err ++;
+        if (stream_lcm == 0) {
+            stream_lcm = cmds[i].stream_cnt;
+        } else {
+            stream_lcm = lcm(cmds[i].stream_cnt, stream_lcm);
         }
+
+        //po("STREAM:  %14s: %s(%d)", cmds[i].arg0, cmds[i].name, cmds[i].stream_ridx);
+        po("STREAM:  %14s: %s", cmds[i].stream_name, cmds[i].name);
+        for (j = 1; j < cmds[i].stream_ridx + 1; j++) {
+            if (i + j < cnt && cmds[i + j].type == CMD_TYPE_STREAM) {
+                // po(", %s(%d)", cmds[i + j].name, cmds[i + j].stream_ridx);
+                po(", %s", cmds[i + j].name);
+            }
+        }
+        i += j - 1;
+        po("\n");
     }
 
-    if (err)
-        return err;
+    if (stream_lcm == 0) {
+        block_size = 1024 * frame_size;
+    } else if (stream_lcm > 1024) {
+        block_size = stream_lcm * frame_size;
+    } else {
+        int x = 1024 / stream_lcm;
+        block_size = x * stream_lcm * frame_size;
+    }
+    frame_count = (block_size * block_count) / frame_size;
+    //po("Stream LCM: %d, block-size: %d, frame-cnt: %d, ring-size: %dmb\n",
+    //   stream_lcm, block_size, frame_count,
+    //   (block_count * block_size) / 1024 / 1024);
 
 #ifdef HAS_LIBPCAP
     for (i = 0; i < cnt; i++) {
@@ -706,7 +793,7 @@ int exec_cmds(int cnt, cmd_t *cmds) {
     tv_left.tv_sec = TIME_OUT_MS / 1000;
     tv_left.tv_usec = (TIME_OUT_MS - (tv_left.tv_sec * 1000)) * 1000;
 
-    clock_t before = clock();
+    //clock_t before = clock();
     while (1) {
         tx_pending = 0;
         idx_max = rfds_wfds_fill(resources, res_valid, pfds, &tx_pending);
@@ -721,6 +808,7 @@ int exec_cmds(int cnt, cmd_t *cmds) {
             res = poll(pfds, idx_max + 1, -1);
             clock_t b = clock();
             POLL_TIME += b - a;
+
         } else {
             if (!timer_started) {
                 gettimeofday(&tv_begin, 0);
@@ -753,25 +841,20 @@ int exec_cmds(int cnt, cmd_t *cmds) {
 
         rfds_wfds_process(resources, res_valid, pfds);
     }
-    clock_t after = clock();
+    //clock_t after = clock();
 
-    double t_total, r_other, r_send, r_poll;
-    t_total = after - before;
-    r_send = SEND_TIME / t_total;
-    r_poll = POLL_TIME / t_total;
-    r_other = 1 - r_send - r_poll;
+    //double t_total, r_other, r_send, r_poll;
+    //t_total = after - before;
+    //r_send = SEND_TIME / t_total;
+    //r_poll = POLL_TIME / t_total;
+    //r_other = 1 - r_send - r_poll;
 
-    printf("Total=%ld send=%ld poll=%ld send+poll=%ld ratio(other/send/poll)=%2.2f/%2.2f/%2.2f\n",
-           after-before, SEND_TIME, POLL_TIME, SEND_TIME + POLL_TIME,
-           r_other, r_send, r_poll);
+    //printf("Total=%ld send=%ld poll=%ld send+poll=%ld ratio(other/send/poll)=%2.2f/%2.2f/%2.2f\n",
+    //       after-before, SEND_TIME, POLL_TIME, SEND_TIME + POLL_TIME,
+    //       r_other, r_send, r_poll);
 
     // close resources
-    for (i = 0; i < res_valid; i++) {
-        if (resources[i].fd >= 0) {
-            close(resources[i].fd);
-            resources[i].fd = -1;
-        }
-    }
+    cmd_socket_destruct(resources, 100);
 
     // check results
     for (i = 0; i < res_valid; i++) {

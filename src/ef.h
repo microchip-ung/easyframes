@@ -234,6 +234,7 @@ extern hdr_t *hdr_tmpls[HDR_TMPL_SIZE];
 
 typedef enum {
     CMD_TYPE_INVALID,
+    CMD_TYPE_STREAM,
     CMD_TYPE_NAME,
 #ifdef HAS_LIBPCAP
     CMD_TYPE_PCAP,
@@ -252,6 +253,10 @@ typedef struct cmd {
     frame_t    *frame;
     buf_t      *frame_buf;
     buf_t      *frame_mask_buf;
+
+    char       *stream_name;
+    int         stream_ridx;
+    int         stream_cnt;
 
     int         done;
     uint32_t    repeat;
@@ -277,6 +282,7 @@ typedef struct {
     int           rx_err_cnt;
 
     uint8_t      *map;
+    int           map_size;
     tpacket_ring  tx_ring;
     tpacket_ring  rx_ring;
 } cmd_socket_t;
