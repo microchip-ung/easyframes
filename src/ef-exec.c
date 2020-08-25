@@ -564,13 +564,14 @@ static int tx_process(cmd_socket_t *resources, int res_valid,
 
                 po("TX     %16s: ", cmd_ptr->arg0);
                 if (cmd_ptr->stream_name) {
-                    po("%s (%dframes, %8.0fus %3.3fmbps %3.3fmfsp)\n",
+                    po("%s (%dframes, %8.0fus %3.3fmbps %3.3fmfsp)",
                        cmd_ptr->stream_name, cmd_ptr->repeat, t_us, mbps, mfps);
                 } else if (cmd_ptr->name) {
                     po("name %s", cmd_ptr->name);
                 } else {
                     print_hex_str(1, cmd_ptr->frame_buf->data, cmd_ptr->frame_buf->size);
                 }
+                po("\n");
 
                 // Mark all frames in stream done
                 for (j = 0, cmd_itr = cmd_ptr; j < cmd_ptr->stream_cnt;
