@@ -133,6 +133,9 @@ int raw_socket(cmd_socket_t *cmd_socket) {
         return -1;
     }
 
+#if 0
+    // At somepoint I need to go back and also do RX using rings. Both RX and TX
+    // needs to be in the same map, and RX must go before TX.
     setup_ring1(s, &cmd_socket->rx_ring, PACKET_RX_RING);
     setup_ring1(s, &cmd_socket->tx_ring, PACKET_TX_RING);
 
@@ -150,6 +153,20 @@ int raw_socket(cmd_socket_t *cmd_socket) {
 
     setup_ring2(s, &cmd_socket->rx_ring);
     setup_ring2(s, &cmd_socket->tx_ring);
+#else
+    setup_ring1(s, &cmd_socket->tx_ring, PACKET_TX_RING);
+
+    cmd_socket->map_size = block_size * block_count;
+    cmd_socket->map = mmap(NULL, cmd_socket->map_size, PROT_READ | PROT_WRITE,
+                           MAP_SHARED | MAP_LOCKED, s, 0);
+    if (cmd_socket->map == MAP_FAILED) {
+        po("%s:%d Failed to mmap: %m\n", __FILE__, __LINE__);
+        return -1;
+    }
+
+    cmd_socket->tx_ring.map = cmd_socket->map;
+    setup_ring2(s, &cmd_socket->tx_ring);
+#endif
     ring_wait_for_init(&cmd_socket->tx_ring);
 
     ifidx = if_nametoindex(name);
@@ -170,7 +187,6 @@ int raw_socket(cmd_socket_t *cmd_socket) {
         return -1;
     }
 
-#if 0
     // Make sure that the socket is empty before started.
     //
     // Warning: I have no idea why this is needed, but otherwise I see that the
@@ -184,8 +200,6 @@ int raw_socket(cmd_socket_t *cmd_socket) {
         if (res < 0)
             break;
     }
-#endif
-
 
     sa.sll_family = PF_PACKET;
     sa.sll_ifindex = if_nametoindex(name);
