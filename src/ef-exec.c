@@ -430,12 +430,14 @@ static int tx_ring_fill_one(cmd_socket_t *s, cmd_t *cmd, int idx) {
             hdr->tp_len = b->size;
             return 0;
 
-        case TP_STATUS_WRONG_FORMAT:
-            printf("An error has occured during transfer\n");
+        case TP_STATUS_SEND_REQUEST: // fall-through
+        case TP_STATUS_SENDING:
+            printf("not ready\n");
             return -1;
 
+        case TP_STATUS_WRONG_FORMAT: // fall-through
         default:
-            printf("not ready\n");
+            printf("An error has occured during transfer\n");
             return -1;
     }
 }
@@ -461,6 +463,26 @@ static int tx_ring_fill(cmd_socket_t *s, cmd_t *cmd) {
     }
 
     return cmd->stream_cnt;
+}
+
+static int tx_ring_pending(cmd_socket_t *s) {
+    int i, cnt = 0;
+    struct tpacket3_hdr *hdr;
+
+    for (i = 0; i < frame_count; i++) {
+        hdr = ((struct tpacket3_hdr *) (s->tx_ring.map + (frame_size * i)));
+        switch((volatile uint32_t)hdr->tp_status) {
+            case TP_STATUS_SEND_REQUEST: // fall-through
+            case TP_STATUS_SENDING:
+                cnt++;
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    return cnt;
 }
 
 static int tx_ring_req(cmd_socket_t *s, cmd_t *cmd) {
@@ -509,7 +531,7 @@ static int tx_ring_req(cmd_socket_t *s, cmd_t *cmd) {
 
 static int tx_process(cmd_socket_t *resources, int res_valid,
                       struct pollfd *pfds) {
-    int i, j, res;
+    int i, j, res, done;
     int ready = 0;
     cmd_t *cmd_ptr, *cmd_itr;
 
@@ -562,8 +584,15 @@ static int tx_process(cmd_socket_t *resources, int res_valid,
                 cmd_ptr->repeat_left -= ready;
             }
 
-            //printf("Send2 return: no-frames=%8d ready=%8d left=%8d res=%d\n", no_frames, ready, cmd_ptr->repeat_left, res);
+            done = 0;
             if (unlikely(res == 0 && cmd_ptr->repeat_left == 0)) {
+                int pending = tx_ring_pending(&resources[i]);
+                if (likely(pending == 0))
+                    done = 1;
+            }
+
+            //printf("Send2 return: no-frames=%8d ready=%8d left=%8d res=%d\n", no_frames, ready, cmd_ptr->repeat_left, res);
+            if (unlikely(done)) {
                 double bits_per_frame = 0, t_us, mbps, mfps;
 
                 cmd_ptr->tx_ts_end = clock();
