@@ -262,7 +262,6 @@ typedef struct cmd {
     uint32_t    repeat;
     uint32_t    repeat_left;
 
-    int         ring_idx;
     int         ring_buffer_initialized;
     clock_t     tx_ts_start;
     clock_t     tx_ts_end;
@@ -272,6 +271,7 @@ typedef struct {
     struct tpacket_req3 req;
     uint8_t *map;
     struct iovec *blocks;
+    int ring_idx;
 } tpacket_ring;
 
 typedef struct {

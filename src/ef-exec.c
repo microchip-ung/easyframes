@@ -436,8 +436,12 @@ static int tx_ring_fill_one(cmd_socket_t *s, cmd_t *cmd, int idx) {
             return -1;
 
         case TP_STATUS_WRONG_FORMAT: // fall-through
+            printf("wrong format!\n");
+            return -1;
+
         default:
-            printf("An error has occured during transfer\n");
+            printf("An error has occured during transfer %d\n",
+                   (volatile uint32_t)hdr->tp_status);
             return -1;
     }
 }
@@ -450,11 +454,11 @@ static int tx_ring_fill(cmd_socket_t *s, cmd_t *cmd) {
         cmd_t *cmd_itr = cmd;
 
         for (i = 0; i < cmd->stream_cnt; i++) {
-            tx_ring_fill_one(s, cmd_itr, cmd->ring_idx); // TODO, err handle
+            tx_ring_fill_one(s, cmd_itr, s->tx_ring.ring_idx); // TODO, err handle
 
-            cmd->ring_idx++;
-            if (cmd->ring_idx >= frame_count)
-                cmd->ring_idx = 0;
+            s->tx_ring.ring_idx++;
+            if (s->tx_ring.ring_idx >= frame_count)
+                s->tx_ring.ring_idx = 0;
 
             cmd_itr->ring_buffer_initialized = 1;
             cmd_itr = cmd_itr->next;
@@ -497,16 +501,16 @@ static int tx_ring_req(cmd_socket_t *s, cmd_t *cmd) {
     //printf("%d: Limit: %d\n", __LINE__, limit);
     for (i = 0; i < limit; i++) {
         hdr = ((struct tpacket3_hdr *)
-               (s->tx_ring.map + (frame_size * cmd->ring_idx)));
+               (s->tx_ring.map + (frame_size * s->tx_ring.ring_idx)));
 
         uint32_t status = (volatile uint32_t)hdr->tp_status;
         if (status == TP_STATUS_AVAILABLE) {
             hdr->tp_status = TP_STATUS_SEND_REQUEST;
             ready++;
 
-            cmd->ring_idx++;
-            if (cmd->ring_idx >= frame_count)
-                cmd->ring_idx = 0;
+            s->tx_ring.ring_idx++;
+            if (s->tx_ring.ring_idx >= frame_count)
+                s->tx_ring.ring_idx = 0;
 
         } else if (status == TP_STATUS_SEND_REQUEST) {
             //printf("send_request ring_idx=%d\n", ring_idx);
