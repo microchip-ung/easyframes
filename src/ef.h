@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 #include <linux/if_packet.h>
 
 #include "version.h"

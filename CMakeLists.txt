@@ -1,4 +1,4 @@
-project(easyframes)
+project(easyframes C)
 
 cmake_minimum_required(VERSION 2.4)
 
@@ -57,9 +57,9 @@ string(REGEX REPLACE "^v([0-9]+)\\..*" "\\1" VERSION_MAJOR "${VERSION}")
 string(REGEX REPLACE "^v[0-9]+\\.([0-9]+).*" "\\1" VERSION_MINOR "${VERSION}")
 set(VERSION_SHORT "${VERSION_MAJOR}.${VERSION_MINOR}")
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/version.cpp.in
-                ${CMAKE_CURRENT_BINARY_DIR}/version.cpp)
-set(version_file "${CMAKE_CURRENT_BINARY_DIR}/version.cpp")
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/version.c.in
+                ${CMAKE_CURRENT_BINARY_DIR}/version.c)
+set(version_file "${CMAKE_CURRENT_BINARY_DIR}/version.c")
 
 add_executable(ef src/main.c ${version_file}) # todo, rename to main.c
 target_link_libraries(ef libef ${_LIBPCAP})
