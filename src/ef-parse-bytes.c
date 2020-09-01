@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <endian.h>
 #include <arpa/inet.h>
 
 struct start_with {
@@ -212,7 +213,9 @@ buf_t *parse_bytes(const char *s, int bytes) {
     for (s = data_begin; *s; ++s) {
         int match_found = 0;
         for (i = 0; i < sizeof(has_chars)/sizeof(has_chars[0]); ++i) {
-            for (const char *set_i = has_chars[i].char_set; *set_i; ++set_i) {
+            const char *set_i;
+
+            for (set_i = has_chars[i].char_set; *set_i; ++set_i) {
                 if (*s == *set_i) {
                     has_mask |= has_chars[i].mask;
                     match_found = 1;
@@ -313,6 +316,7 @@ buf_t *parse_bytes(const char *s, int bytes) {
                ((has_mask & ~(HAS_HEX_COL)) == 0) && (has_mask & HAS_COLON)) {
         // This will be treated as a mac-address
         uint8_t m[6] = {};
+        const char *x;
 
         // We want to be able to write something like this (like we RFC2373
         // specifies for IPv6):
@@ -334,7 +338,7 @@ buf_t *parse_bytes(const char *s, int bytes) {
 
         //po("line: %d data_begin: %s\n", __LINE__, data_begin);
 
-        for (const char *x = data_begin; *x; ++x) {
+        for (x = data_begin; *x; ++x) {
             int colon = 0;
             int val = 0;
 

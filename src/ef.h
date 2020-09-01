@@ -59,8 +59,8 @@ void bl_check(buf_list_t *b);
 void bl_reset(buf_list_t *b);
 void bset_value(buf_t *b, uint8_t v);
 
-inline void bl_init(buf_list_t *b) { bl_reset(b); }
-inline void bl_destroy(buf_list_t *b) { bl_reset(b); }
+static inline void bl_init(buf_list_t *b) { bl_reset(b); }
+static inline void bl_destroy(buf_list_t *b) { bl_reset(b); }
 
 int bl_printf_append(buf_list_t *b, const char *format, ...)
     __attribute__ ((format (printf, 2, 3)));

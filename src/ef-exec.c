@@ -108,7 +108,7 @@ int ring_wait_for_init(tpacket_ring *ring) {
 
 
 int raw_socket(cmd_socket_t *cmd_socket) {
-    int s, res, val, ifidx;
+    int s, res, val, ifidx, i;
     struct sockaddr_ll sa = {};
     struct packet_mreq mr = {};
 
@@ -194,7 +194,7 @@ int raw_socket(cmd_socket_t *cmd_socket) {
     //
     // TODO: This does not seem to be needed, if we uses a RX ring buffer
     // instead (atleast that seems to work for libpcap)
-    for (int i = 0; i < 10000; ++i) {
+    for (i = 0; i < 10000; ++i) {
         struct msghdr msg = { 0 };
         int res = recvmsg(s, &msg, MSG_DONTWAIT);
         if (res < 0)
