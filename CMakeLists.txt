@@ -7,13 +7,21 @@ include_directories(src)
 
 
 set(_LIBPCAP "")
-FIND_PATH(PCAP_INCLUDE_DIR NAMES pcap/pcap.h)
-FIND_LIBRARY(PCAP_LIBRARY NAMES pcap)
-
-if (PCAP_LIBRARY)
+find_package(PkgConfig)
+pkg_check_modules(PCAP libpcap)
+if (PCAP_FOUND)
     add_definitions(-DHAS_LIBPCAP)
-    include_directories(${PCAP_INCLUDE_DIR})
-    set(_LIBPCAP ${PCAP_LIBRARY})
+    include_directories(${PCAP_INCLUDE_DIRS})
+    set(_LIBPCAP ${PCAP_LIBRARIES})
+else()
+    FIND_PATH(PCAP_INCLUDE_DIR NAMES pcap/pcap.h)
+    FIND_LIBRARY(PCAP_LIBRARY NAMES pcap)
+
+    if (PCAP_LIBRARY)
+        add_definitions(-DHAS_LIBPCAP)
+        include_directories(${PCAP_INCLUDE_DIR})
+        set(_LIBPCAP ${PCAP_LIBRARY})
+    endif()
 endif()
 
 add_library(libef STATIC
