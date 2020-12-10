@@ -1,6 +1,6 @@
 project(easyframes C)
 
-cmake_minimum_required(VERSION 2.4)
+cmake_minimum_required(VERSION 2.8.12)
 
 add_definitions(-Wall)
 include_directories(src)
