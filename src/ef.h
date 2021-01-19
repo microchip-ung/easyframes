@@ -227,6 +227,8 @@ typedef enum {
     HDR_TMPL_TS_RESPONSE,
     HDR_TMPL_PNET_RTC,
     HDR_TMPL_OPC_UA,
+    HDR_TMPL_PRP_RCT,
+    HDR_TMPL_HSR_TAG,
 
     HDR_TMPL_SIZE,
 } hdr_tmpl_t;
