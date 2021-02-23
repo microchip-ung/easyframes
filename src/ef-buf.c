@@ -54,7 +54,7 @@ int bequal(const buf_t *a, const buf_t *b) {
 
 int bequal_mask(const buf_t *rx_frame, const buf_t *expected_frame,
                 const buf_t *mask, int padding) {
-    int i = 0;
+    size_t i = 0;
 
     if ((rx_frame && !expected_frame) || (!rx_frame && expected_frame))
         return 0;
@@ -195,7 +195,8 @@ int pe(const char *fmt, ...) {
 int bl_printf_append(buf_list_t *b, const char *fmt, ...) {
     char *data_end;
     va_list ap;
-    int str_size;
+    int res;
+    size_t str_size;
     size_t free_space;
     size_t alloc_size;
     buf_list_element_t *tail, *new_element;
@@ -211,11 +212,13 @@ int bl_printf_append(buf_list_t *b, const char *fmt, ...) {
     }
 
     va_start(ap, fmt);
-    str_size = vsnprintf(data_end, free_space, fmt, ap);
+    res = vsnprintf(data_end, free_space, fmt, ap);
     va_end(ap);
 
-    if (str_size < 0)
-        return str_size;
+    if (res < 0)
+        return res;
+
+    str_size = (size_t)res;
 
     if (str_size <= free_space) {
         b->size += str_size;

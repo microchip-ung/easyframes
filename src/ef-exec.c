@@ -296,7 +296,7 @@ int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
                     tx_done = 0;
                 }
 
-                if (res == b->size && cmd_ptr->repeat == 0) {
+                if ((size_t)res == b->size && cmd_ptr->repeat == 0) {
                     po("TX     %16s: ", cmd_ptr->arg0);
                     if (cmd_ptr->name) {
                         po("name %s", cmd_ptr->name);

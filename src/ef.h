@@ -168,8 +168,8 @@ void hdr_write_field(buf_t *b, int offset, const field_t *f, const buf_t *val);
 void frame_reset(frame_t *f);
 hdr_t *frame_clone_and_push_hdr(frame_t *f, hdr_t *h);
 
-int hdr_copy_to_buf(hdr_t *hdr, int offset, buf_t *buf);
-int hdr_copy_to_buf_mask(hdr_t *hdr, int offset, buf_t *buf);
+int hdr_copy_to_buf(hdr_t *hdr, size_t offset, buf_t *buf);
+int hdr_copy_to_buf_mask(hdr_t *hdr, size_t offset, buf_t *buf);
 int hdr_parse_fields(frame_t *f, hdr_t *hdr, int offset,
                      int argc, const char *argv[]);
 

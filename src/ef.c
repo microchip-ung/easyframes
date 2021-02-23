@@ -243,7 +243,8 @@ static void bit_set(buf_t *b, size_t bit_pos, int value)
 
 void hdr_write_field(buf_t *b, int offset, const field_t *f, const buf_t *val)
 {
-    size_t pos, bits_to_1st_valid;
+    int pos;
+    size_t bits_to_1st_valid;
 
     // b             = Output
     // b->size       = Number of bytes in output
@@ -254,7 +255,7 @@ void hdr_write_field(buf_t *b, int offset, const field_t *f, const buf_t *val)
     // val           = Value to write
     // val->size     = Number of bytes in value to write
     // val->data     = Buffer of val->size bytes.
-    assert(8 * b->size >= f->bit_width + f->bit_offset + offset * 8);
+    assert(8 * b->size >= (size_t)f->bit_width + f->bit_offset + offset * 8);
 
     // How many bits do we have to move into the value to encode before we reach
     // the first valid bit given the field width?
@@ -374,7 +375,7 @@ int hdr_parse_fields(frame_t *frame, struct hdr *hdr, int offset,
     return i;
 }
 
-static int hdr_copy_to_buf_(hdr_t *hdr, int offset, buf_t *buf, int mask) {
+static int hdr_copy_to_buf_(hdr_t *hdr, size_t offset, buf_t *buf, int mask) {
     int i;
     buf_t *v = 0;
     field_t *f = 0;
@@ -419,11 +420,11 @@ static int hdr_copy_to_buf_(hdr_t *hdr, int offset, buf_t *buf, int mask) {
     return i;
 }
 
-int hdr_copy_to_buf_mask(hdr_t *hdr, int offset, buf_t *buf) {
+int hdr_copy_to_buf_mask(hdr_t *hdr, size_t offset, buf_t *buf) {
     return hdr_copy_to_buf_(hdr, offset, buf, 1);
 }
 
-int hdr_copy_to_buf(hdr_t *hdr, int offset, buf_t *buf) {
+int hdr_copy_to_buf(hdr_t *hdr, size_t offset, buf_t *buf) {
     return hdr_copy_to_buf_(hdr, offset, buf, 0);
 }
 
@@ -431,7 +432,8 @@ int hdr_copy_to_buf(hdr_t *hdr, int offset, buf_t *buf) {
 buf_t *frame_to_buf(frame_t *f) {
     int i;
     buf_t *buf;
-    int frame_size = 0, offset = 0;
+    size_t offset = 0;
+    int frame_size = 0;
 
     //po("Stack size: %d\n", f->stack_size);
     for (i = 0; i < f->stack_size; ++i) {
@@ -459,7 +461,8 @@ buf_t *frame_to_buf(frame_t *f) {
 buf_t *frame_mask_to_buf(frame_t *f) {
     int i;
     buf_t *buf;
-    int frame_size = 0, offset = 0;
+    size_t offset = 0;
+    int frame_size = 0;
     int frame_size_no_padding;
 
     for (i = 0; i < f->stack_size; ++i) {

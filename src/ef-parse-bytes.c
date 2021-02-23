@@ -43,12 +43,12 @@ enum {
                      HAS_DOT)
 
 static struct has_char has_chars[] = {
-    {HAS_BASE_2,  "01" },
-    {HAS_BASE_8,  "234567" },
-    {HAS_BASE_10, "89" },
-    {HAS_BASE_16, "aAbBcCdDeEfF" },
-    {HAS_DOT,     "." },
-    {HAS_COLON,   ":" },
+    {.mask = HAS_BASE_2,  .char_set = "01" },
+    {.mask = HAS_BASE_8,  .char_set = "234567" },
+    {.mask = HAS_BASE_10, .char_set = "89" },
+    {.mask = HAS_BASE_16, .char_set = "aAbBcCdDeEfF" },
+    {.mask = HAS_DOT,     .char_set = "." },
+    {.mask = HAS_COLON,   .char_set = ":" },
 };
 
 buf_t *parse_bytes_binary(const char *s, int size) {
@@ -193,11 +193,12 @@ buf_t *parse_bytes_hex(const char *s, int size) {
 
 buf_t *parse_bytes(const char *s, int bytes) {
     buf_t *b;
+    size_t i;
     int base, s_size = strlen(s);
     const char *s_begin = s, *data_begin = s;
     const char *data_end = data_begin + s_size;
     uint32_t has_mask = 0;
-    int i, has_other = 0;
+    int has_other = 0;
     uint32_t start_mask = 0;
 
     // po("line: %d %s\n", __LINE__, s);
@@ -578,7 +579,7 @@ buf_t *parse_field_hex(struct hdr *hdr, int hdr_offset, const char *s, int bytes
         return 0;
     }
 
-    if (b->size > bytes) {
+    if (b->size > (size_t)bytes) {
         po("%s:%d: ERROR: Parsed field size is too large\n", __FILE__, __LINE__);
         return 0;
     }
@@ -655,10 +656,9 @@ buf_t *parse_var_bytes_repeat(const char *cnt_, const char *val_) {
 }
 
 buf_t *parse_var_bytes_pattern(const char *pat, const char *len_) {
-    int i;
     buf_t *b;
     uint8_t val;
-    uint32_t len;
+    uint32_t i, len;
 
     if (parse_uint32(len_, &len) != 0) {
         return 0;
