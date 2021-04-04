@@ -172,10 +172,7 @@ void signal_child(int sig) {
 }
 
 static int capture_execl(const char *c) {
-    int i, res;
-
-    for (i = 0; i < 1024; ++i)
-        close(i);
+    int res;
 
     res = execl("/bin/sh", "sh", "-c", c, (char *) NULL);
     return res;
