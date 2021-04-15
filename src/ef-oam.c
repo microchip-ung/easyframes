@@ -253,7 +253,7 @@ static field_t RAPS_FIELDS[] = {
       .bit_width =  24*8 },
     { .name = "padding",
       .help = "",
-      .bit_width =  30*8 },
+      .bit_width =  10*8 },
 };
 
 static hdr_t HDR_RAPS = {
