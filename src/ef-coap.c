@@ -121,7 +121,7 @@ buf_t *coap_parse_parms(hdr_t *hdr, int hdr_offset, const char *s, int bytes) {
 
     hdr->size = offset / 8;
 
-
+    bfree(bb);
     return b;
 }
 
@@ -167,7 +167,6 @@ static field_t COAP_FIELDS[] = {
 static hdr_t HDR_COAP = {
     .name = "coap",
     .help = "Constrained Application Protocol",
-//    .type = 0x0806,  /*! \TODO RWI:  */
     .fields = COAP_FIELDS,
     .fields_size = sizeof(COAP_FIELDS) / sizeof(COAP_FIELDS[0]),
     .parser = hdr_parse_fields,

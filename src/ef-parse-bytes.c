@@ -116,22 +116,22 @@ buf_t *parse_bytes_hex(const char *s, int size) {
     buf_t *b;
     uint8_t *p_o, tmp;
     const char *p;
-    int cnt_nipple, has_others, has_align_issues, valid;
+    int cnt_nibble, has_others, has_align_issues, valid;
 
     p = s;
-    cnt_nipple = 0;
+    cnt_nibble = 0;
     has_others = 0;
     has_align_issues = 0;
 
     for (; *p; ++p) {
         if (*p >= '0' && *p <= '9') {
-            cnt_nipple ++;
+            cnt_nibble ++;
         } else if (*p >= 'a' && *p <= 'f') {
-            cnt_nipple ++;
+            cnt_nibble ++;
         } else if (*p >= 'A' && *p <= 'F') {
-            cnt_nipple ++;
+            cnt_nibble ++;
         } else if (*p == '.' || *p == ':' || *p == '-' || *p == '_') {
-            if (cnt_nipple % 2 != 0) {
+            if (cnt_nibble % 2 != 0) {
                 has_align_issues = 1;
             }
         } else {
@@ -139,11 +139,11 @@ buf_t *parse_bytes_hex(const char *s, int size) {
         }
     }
 
-    if (cnt_nipple % 2 != 0) {
+    if (cnt_nibble % 2 != 0) {
         has_align_issues = 1;
     }
 
-    if (has_others || cnt_nipple == 0) {
+    if (has_others || cnt_nibble == 0) {
         po("ERROR: Could not parse >%s< as a hex string\n", s);
         return 0;
     }
@@ -156,8 +156,8 @@ buf_t *parse_bytes_hex(const char *s, int size) {
     b = balloc(size);
 
     p = s;
-    p_o = b->data + size - cnt_nipple / 2;
-    cnt_nipple = 0;
+    p_o = b->data + size - cnt_nibble / 2;
+    cnt_nibble = 0;
 
     for (; *p; ++p) {
         if (*p >= '0' && *p <= '9') {
@@ -178,9 +178,9 @@ buf_t *parse_bytes_hex(const char *s, int size) {
 
         if (valid) {
             *p_o |= tmp;
-            cnt_nipple++;
+            cnt_nibble++;
 
-            if (cnt_nipple % 2 == 1)
+            if (cnt_nibble % 2 == 1)
                 *p_o <<= 4;
             else
                 p_o++;
@@ -485,22 +485,22 @@ buf_t *parse_var_bytes_hex(const char *s, int min_size) {
     buf_t *b;
     uint8_t *p_o, tmp;
     const char *p;
-    int cnt_nipple, has_others, has_align_issues, valid;
+    int cnt_nibble, has_others, has_align_issues, valid;
 
     p = s;
-    cnt_nipple = 0;
+    cnt_nibble = 0;
     has_others = 0;
     has_align_issues = 0;
 
     for (; *p; ++p) {
         if (*p >= '0' && *p <= '9') {
-            cnt_nipple ++;
+            cnt_nibble ++;
         } else if (*p >= 'a' && *p <= 'f') {
-            cnt_nipple ++;
+            cnt_nibble ++;
         } else if (*p >= 'A' && *p <= 'F') {
-            cnt_nipple ++;
+            cnt_nibble ++;
         } else if (*p == '.' || *p == ':' || *p == '-' || *p == '_') {
-            if (cnt_nipple % 2 != 0) {
+            if (cnt_nibble % 2 != 0) {
                 has_align_issues = 1;
             }
         } else {
@@ -508,11 +508,11 @@ buf_t *parse_var_bytes_hex(const char *s, int min_size) {
         }
     }
 
-    if (cnt_nipple % 2 != 0) {
+    if (cnt_nibble % 2 != 0) {
         has_align_issues = 1;
     }
 
-    if (has_others || cnt_nipple == 0) {
+    if (has_others || cnt_nibble == 0) {
         po("ERROR: Could not parse >%s< as a hex string\n", s);
         return 0;
     }
@@ -522,15 +522,15 @@ buf_t *parse_var_bytes_hex(const char *s, int min_size) {
         return 0;
     }
 
-    if (cnt_nipple / 2 > min_size) {
-        b = balloc(cnt_nipple / 2);
+    if (cnt_nibble / 2 > min_size) {
+        b = balloc(cnt_nibble / 2);
     } else {
         b = balloc(min_size);
     }
 
     p = s;
     p_o = b->data;
-    cnt_nipple = 0;
+    cnt_nibble = 0;
 
     for (; *p; ++p) {
         if (*p >= '0' && *p <= '9') {
@@ -551,9 +551,9 @@ buf_t *parse_var_bytes_hex(const char *s, int min_size) {
 
         if (valid) {
             *p_o |= tmp;
-            cnt_nipple++;
+            cnt_nibble++;
 
-            if (cnt_nipple % 2 == 1)
+            if (cnt_nibble % 2 == 1)
                 *p_o <<= 4;
             else
                 p_o++;
