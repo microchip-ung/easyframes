@@ -1,4 +1,5 @@
-﻿#include "ef.h"
+﻿#include <stdio.h>
+#include "ef.h"
 
 
 enum {
@@ -125,6 +126,22 @@ buf_t *coap_parse_parms(hdr_t *hdr, int hdr_offset, const char *s, int bytes) {
     return b;
 }
 
+static int coap_fill_defaults(struct frame *f, int stack_idx) {
+    char buf[16];
+    hdr_t *h = f->stack[stack_idx];
+    field_t *tkl = find_field(h, "tkl");
+
+    if (!tkl->val) {
+
+        snprintf(buf, 16, "%d", h->fields[COAP_FIELD_TOKEN].bit_width/8);
+
+        tkl->val = parse_bytes(buf, 1);
+    }
+
+    return 0;
+}
+
+
 static field_t COAP_FIELDS[] = {  
     [COAP_FIELD_VERSION] = 
     { .name = "ver",
@@ -169,6 +186,7 @@ static hdr_t HDR_COAP = {
     .help = "Constrained Application Protocol",
     .fields = COAP_FIELDS,
     .fields_size = sizeof(COAP_FIELDS) / sizeof(COAP_FIELDS[0]),
+    .frame_fill_defaults = coap_fill_defaults,
     .parser = hdr_parse_fields,
 };
 
