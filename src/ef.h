@@ -230,6 +230,8 @@ typedef enum {
     HDR_TMPL_PRP_RCT,
     HDR_TMPL_HSR_TAG,
     HDR_TMPL_COAP,
+    HDR_TMPL_COAP_OPTIONS,
+    HDR_TMPL_COAP_PARMS,
 
     HDR_TMPL_SIZE,
 } hdr_tmpl_t;
