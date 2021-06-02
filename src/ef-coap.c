@@ -22,12 +22,15 @@ enum {
     COAP_OPT_FIELD_LAST
 };
 
+<<<<<<< HEAD
 /* neede to calculate the option delta */
 static uint8_t opt_num_last;
 static buf_t *opt_num;
 static buf_t *opt_val;
 
 
+=======
+>>>>>>> 5ee350bb2b9a4e49f0db401b395f03fffa0b98f5
 static buf_t *coap_parse_code(hdr_t *hdr, int hdr_offset, const char *s, int bytes) {
     buf_t *b = balloc(1);
     uint8_t tmp;
@@ -160,6 +163,10 @@ static int coap_fill_defaults(struct frame *f, int stack_idx) {
     field_t *tkl = find_field(h, "tkl");
 
     if (!tkl->val) {
+<<<<<<< HEAD
+=======
+
+>>>>>>> 5ee350bb2b9a4e49f0db401b395f03fffa0b98f5
         snprintf(buf, 16, "%d", BIT_TO_BYTE(h->fields[COAP_FIELD_TOKEN].bit_width));
 
         tkl->val = parse_bytes(buf, 1);
@@ -218,6 +225,7 @@ static hdr_t HDR_COAP = {
 };
 
 static int options_fill_defaults(struct frame *f, int stack_idx) {
+<<<<<<< HEAD
     uint8_t delta;
 
     if (!opt_num) {
@@ -230,6 +238,8 @@ static int options_fill_defaults(struct frame *f, int stack_idx) {
 
 
 
+=======
+>>>>>>> 5ee350bb2b9a4e49f0db401b395f03fffa0b98f5
     return 0;
 }
 
@@ -262,14 +272,22 @@ static int parameters_fill_defaults(struct frame *f, int stack_idx) {
 static field_t COAP_PARMS_FIELDS[] = {  
 //    [COAP_FIELD_PARMS]
     { .name = "par",
+<<<<<<< HEAD
       .help = "CoAP Parameter field.",
+=======
+      .help = "CoAP Parameter field. (optional)",
+>>>>>>> 5ee350bb2b9a4e49f0db401b395f03fffa0b98f5
       .bit_width = 0,
       .parser = coap_parse_parms }
 };
 
 static hdr_t HDR_COAP_PARMS = {
     .name = "coap-parms",
+<<<<<<< HEAD
     .help = "Constrained Application Protocol Parameters. (o)ptional)",
+=======
+    .help = "Constrained Application Protocol Parameters",
+>>>>>>> 5ee350bb2b9a4e49f0db401b395f03fffa0b98f5
     .fields = COAP_PARMS_FIELDS,
     .fields_size = sizeof(COAP_PARMS_FIELDS) / sizeof(COAP_PARMS_FIELDS[0]),
     .frame_fill_defaults = parameters_fill_defaults,
@@ -291,8 +309,11 @@ void coap_init() {
     hdr_tmpls[HDR_TMPL_COAP]         = &HDR_COAP;
     hdr_tmpls[HDR_TMPL_COAP_OPTIONS] = &HDR_COAP_OPTIONS;
     hdr_tmpls[HDR_TMPL_COAP_PARMS]   = &HDR_COAP_PARMS;
+<<<<<<< HEAD
 
     opt_num_last = 0;
+=======
+>>>>>>> 5ee350bb2b9a4e49f0db401b395f03fffa0b98f5
 }
 
 void coap_uninit() {
