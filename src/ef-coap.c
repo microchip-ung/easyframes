@@ -88,12 +88,6 @@ buf_t *coap_parse_opt_num(hdr_t *hdr, int hdr_offset, const char *s, int bytes) 
     return 0;
 }
 
-buf_t *coap_parse_opt_val(hdr_t *hdr, int hdr_offset, const char *s, int bytes) {
-    opt_val = parse_var_bytes_hex(s, 1);
-
-    return 0;
-}
-
 buf_t *coap_parse_parms(hdr_t *hdr, int hdr_offset, const char *s, int bytes) {
     buf_t *bb, *b;
 
@@ -262,7 +256,7 @@ static field_t COAP_OPT_FIELDS[] = {
     { .name = "val",
       .help = "CoAP Option Value",
       .bit_width = 0,
-      .parser = coap_parse_opt_val }
+      .parser_multi = field_parse_multi_var_byte }
 };
 
 static hdr_t HDR_COAP_OPTIONS = {

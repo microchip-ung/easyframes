@@ -697,7 +697,7 @@ int parse_var_bytes_(buf_t **b_out, int argc, const char *argv[]) {
         return 0;
 
     if (strcmp(argv[i], "help") == 0) {
-        po("TODO\n");
+        po("Supported sub-commands: hex <hex-str>, ascii <str>, ascii0 <str>, repeat <cnt> <val>, pattern (cnt|zero|ones) <cnt>\n");
         return -1;
 
     } else if (strcmp(argv[i], "hex") == 0) {
@@ -804,3 +804,25 @@ int parse_var_bytes(buf_t **b_out, int argc, const char *argv[]) {
 
     return i;
 }
+
+int field_parse_multi_var_byte(struct hdr *hdr, int hdr_offset, struct field *f,
+                               int argc, const char *argv[]) {
+    int res;
+    buf_t *b = 0;
+
+    res = parse_var_bytes(&b, argc, argv);
+
+    if (res > 1 && res <= argc) {
+        f->val = b;
+        f->bit_width = b->size * 8;
+        hdr->size += b->size;
+
+        return res;
+    }
+
+    if (b)
+        bfree(b);
+
+    return 0;
+}
+

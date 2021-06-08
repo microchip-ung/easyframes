@@ -311,11 +311,11 @@ hdr_t *frame_clone_and_push_hdr(frame_t *f, hdr_t *h) {
 
 int hdr_parse_fields(frame_t *frame, struct hdr *hdr, int offset,
                      int argc, const char *argv[]) {
-    int i, j;
+    int i = 0, j;
     field_t *f;
     int field_ignore = 0;
 
-    for (i = 0; i < argc; ++i) {
+    while (i < argc) {
         if (strcmp(argv[i], "help") == 0) {
             hdr_help(&hdr, 1, 0, 1);
             return -1;
@@ -330,6 +330,7 @@ int hdr_parse_fields(frame_t *frame, struct hdr *hdr, int offset,
                 hdr->fields[j].rx_match_skip = 1;
 
             frame->has_mask = 1;
+            i += 1;
             continue;
         }
 
@@ -341,6 +342,7 @@ int hdr_parse_fields(frame_t *frame, struct hdr *hdr, int offset,
         if (field_ignore) {
             field_ignore = 0;
             f->rx_match_skip = 1;
+            i += 1;
             continue;
         }
 
@@ -355,6 +357,7 @@ int hdr_parse_fields(frame_t *frame, struct hdr *hdr, int offset,
         if (strcmp(argv[i], "ign") == 0 || strcmp(argv[i], "ignore") == 0) {
             frame->has_mask = 1;
             f->rx_match_skip = 1;
+            i += 1;
             continue;
         }
 
@@ -366,8 +369,20 @@ int hdr_parse_fields(frame_t *frame, struct hdr *hdr, int offset,
         //po("Assigned value for %s\n", f->name);
         if (f->parser != NULL) {
             f->val = f->parser(hdr, offset, argv[i], BIT_TO_BYTE(f->bit_width));
+            i += 1;
+        } else if (f->parser_multi != NULL) {
+            int cnt = f->parser_multi(hdr, offset, f, argc - i, argv + i);
+
+            if (cnt > 0 && cnt <= argc - i) {
+                i += cnt;
+            } else {
+                po("ERROR: parser_multi consumed more words than avialable\n");
+                return -1;
+            }
+
         } else {
             f->val = parse_bytes(argv[i], BIT_TO_BYTE(f->bit_width));
+            i += 1;
         }
         f->rx_match_skip = 0;
     }
