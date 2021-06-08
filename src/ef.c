@@ -376,7 +376,7 @@ int hdr_parse_fields(frame_t *frame, struct hdr *hdr, int offset,
             if (cnt > 0 && cnt <= argc - i) {
                 i += cnt;
             } else {
-                po("ERROR: parser_multi consumed more words than avialable\n");
+                po("ERROR: parser_multi consumed more words than available\n");
                 return -1;
             }
 

@@ -20,9 +20,7 @@ enum {
     COAP_OPT_FIELD_LAST
 };
 
-/* neede to calculate the option delta */
 static buf_t *opt_num;
-static buf_t *opt_val;
 
 
 static buf_t *coap_parse_code(hdr_t *hdr, int hdr_offset, const char *s, int bytes) {
@@ -180,8 +178,13 @@ static int options_fill_defaults(struct frame *f, int stack_idx) {
         return 0;
     }
 
-    if (opt_val){
-        len = opt_val->size; 
+    hdr_t   *hdr = f->stack[stack_idx];
+    field_t *fnum = find_field(hdr, "num");
+    field_t *fval = find_field(hdr, "val");
+
+    if (fval){
+        len = fval->val->size; 
+        //vlen = len;
     }
 
     delta = opt_num->data[0] * 256 + opt_num->data[1];
@@ -204,7 +207,6 @@ static int options_fill_defaults(struct frame *f, int stack_idx) {
     }    
     *(b->data) = delta << 4;
 
-
     if (len > 12) {
         if (len > 268) {
             len_ext          = len - 269;
@@ -221,20 +223,14 @@ static int options_fill_defaults(struct frame *f, int stack_idx) {
 
     *(b->data) |= len & 0x0F;
 
-    bb = balloc(i + opt_val->size);
-    if (opt_val->size != 0) {
-        memcpy(bb->data,b->data, i);
-        memcpy(bb->data + i, opt_val->data, opt_val->size);
+    bb = balloc(i);
+    memcpy(bb->data,b->data, i);
+
+    if (fnum) {
+        fnum->val = bb;
     }
 
-    hdr_t   *hdr = f->stack[stack_idx];
-    field_t *num = find_field(hdr, "num");
-
-    if (num) {
-        num->val = bb;
-    }
-
-    hdr->fields[COAP_OPT_FIELD_NUM].bit_width = num->val->size * 8;
+    hdr->fields[COAP_OPT_FIELD_NUM].bit_width = fnum->val->size * 8;
 
     for (i = 0; i < COAP_OPT_FIELD_LAST; ++i) {
         hdr->fields[i].bit_offset = offset;
