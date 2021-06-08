@@ -21,7 +21,6 @@ enum {
 };
 
 /* neede to calculate the option delta */
-static uint8_t opt_num_last;
 static buf_t *opt_num;
 static buf_t *opt_val;
 
@@ -179,7 +178,6 @@ static int options_fill_defaults(struct frame *f, int stack_idx) {
     uint16_t len = 0;
     uint16_t len_ext = 0;
     uint16_t i;
-    uint16_t temp;
     int offset = 0;
 
 
@@ -192,17 +190,10 @@ static int options_fill_defaults(struct frame *f, int stack_idx) {
         len = opt_val->size; 
     }
 
-    temp = opt_num->data[0] * 256 + opt_num->data[1];
-    if (temp < opt_num_last) {
-        return 0;
-    }
+    delta = opt_num->data[0] * 256 + opt_num->data[1];
 
     b = balloc(5);
     
-    /* calculate delta and delta-ext values */
-    delta = temp - opt_num_last;
-    opt_num_last = temp;
-
     i = 1;
     if (delta > 12) {
         if (delta > 268) {
@@ -320,7 +311,6 @@ void coap_init() {
     hdr_tmpls[HDR_TMPL_COAP_OPTIONS] = &HDR_COAP_OPTIONS;
     hdr_tmpls[HDR_TMPL_COAP_PARMS]   = &HDR_COAP_PARMS;
 
-    opt_num_last = 0;
 }
 
 void coap_uninit() {
