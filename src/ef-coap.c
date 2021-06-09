@@ -20,35 +20,53 @@ enum {
     COAP_OPT_FIELD_LAST
 };
 
-static buf_t *opt_num;
+enum {
+    COAP_PARMS_FIELD_PAR,
+
+    COAP_PARMS_FIELD_LAST
+};
+
+static buf_t *opt_num;   // TODO remove
 
 
 static buf_t *coap_parse_code(hdr_t *hdr, int hdr_offset, const char *s, int bytes) {
-    buf_t *b = balloc(1);
+    buf_t   *b = NULL;
     uint8_t tmp;
     uint8_t valid = 0;
-
-    if (s[0] >= '0' && s[0] <= '7') {
-        if (s[1] == '.') {
-            if (s[2] >= '0' && s[2] <= '3'){
-                tmp = s[2] - '0';
-                if (s[3] >= '0' && s[2] <= '9') {
-                    tmp = tmp * 10 + s[3] - '0';
-                    if (tmp < 32){
-                        tmp = ((s[0] - '0') << 5) + tmp;
-                        valid = 1;
+/*
+    if (strlen(s) != 4) {
+        if (s[0] >= '0' && s[0] <= '7') {
+            if (s[1] == '.') {
+                if (s[2] >= '0' && s[2] <= '3'){
+                    tmp = s[2] - '0';
+                    if (s[3] >= '0' && s[2] <= '9') {
+                        tmp = tmp * 10 + s[3] - '0';
+                        if (tmp < 32){
+                            tmp = ((s[0] - '0') << 5) + tmp;
+                            valid = 1;
+                        }
                     }
                 }
             }
         }
     }
+*/
+    if (   (strlen(s) == 4) 
+        && (s[0] >= '0' && s[0] <= '7')
+        && (s[1] == '.')
+        && (s[2] >= '0' && s[2] <= '3')
+        && (s[3] >= '0' && s[2] <= '9') ) {
+        tmp = s[2] - '0';
+        tmp = tmp * 10 + s[3] - '0';
+        if (tmp < 32){
+            tmp = ((s[0] - '0') << 5) + tmp;
+            valid = 1;
+        }    
+    }
 
     if (valid) {
-        b->size = 1;
+        b = balloc(1);        
         b->data[0] = tmp;
-    }
-    else {
-        b = NULL;
     }
 
     return b;
@@ -103,7 +121,7 @@ buf_t *coap_parse_parms(hdr_t *hdr, int hdr_offset, const char *s, int bytes) {
     *(b->data) = 0xFF;
 
 
-    hdr->fields[0].bit_width = b->size * 8;
+    hdr->fields[COAP_PARMS_FIELD_PAR].bit_width = b->size * 8;
 
     bfree(bb);
     return b;
@@ -113,11 +131,13 @@ static int coap_fill_defaults(struct frame *f, int stack_idx) {
     char buf[16];
     hdr_t *h = f->stack[stack_idx];
     field_t *tkl = find_field(h, "tkl");
+    field_t *token = find_field(h, "token");
 
     if (!tkl->val) {
-        snprintf(buf, 16, "%d", BIT_TO_BYTE(h->fields[COAP_FIELD_TOKEN].bit_width));
-
-        tkl->val = parse_bytes(buf, 1);
+        if (token->val) {
+            snprintf(buf, 16, "%d", BIT_TO_BYTE(h->fields[COAP_FIELD_TOKEN].bit_width));
+            tkl->val = parse_bytes(buf, 1);
+        }
     }
 
     return 0;
@@ -239,6 +259,7 @@ static int options_fill_defaults(struct frame *f, int stack_idx) {
 
     hdr->size = offset / 8;
 
+    bfree(b);
     return 0;
 }
 
@@ -269,7 +290,7 @@ static int parameters_fill_defaults(struct frame *f, int stack_idx) {
 }
 
 static field_t COAP_PARMS_FIELDS[] = {  
-//    [COAP_FIELD_PARMS]
+    [COAP_PARMS_FIELD_PAR]
     { .name = "par",
       .help = "CoAP Parameter field.",
       .bit_width = 0,
