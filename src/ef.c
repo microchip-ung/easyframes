@@ -450,6 +450,10 @@ buf_t *frame_to_buf(frame_t *f) {
     size_t offset = 0;
     int frame_size = 0;
 
+    for (i = f->stack_size - 1; i >= 0; --i)
+        if (f->stack[i]->frame_fill_defaults)
+            f->stack[i]->frame_fill_defaults(f, i);
+
     //po("Stack size: %d\n", f->stack_size);
     for (i = 0; i < f->stack_size; ++i) {
         f->stack[i]->offset_in_frame = frame_size;
@@ -458,10 +462,6 @@ buf_t *frame_to_buf(frame_t *f) {
 
     if (frame_size < 60)
         frame_size = 60;
-
-    for (i = f->stack_size - 1; i >= 0; --i)
-        if (f->stack[i]->frame_fill_defaults)
-            f->stack[i]->frame_fill_defaults(f, i);
 
     buf = balloc(frame_size);
 

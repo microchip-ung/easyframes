@@ -104,6 +104,7 @@ buf_t *coap_parse_opt_num(hdr_t *hdr, int hdr_offset, const char *s, int bytes) 
     return 0;
 }
 
+
 buf_t *coap_parse_parms(hdr_t *hdr, int hdr_offset, const char *s, int bytes) {
     buf_t *bb, *b;
 
@@ -120,8 +121,8 @@ buf_t *coap_parse_parms(hdr_t *hdr, int hdr_offset, const char *s, int bytes) {
     memcpy(b->data + 1, bb->data, bb->size);
     *(b->data) = 0xFF;
 
-
     hdr->fields[COAP_PARMS_FIELD_PAR].bit_width = b->size * 8;
+    hdr->size = b->size;
 
     bfree(bb);
     return b;
@@ -193,7 +194,6 @@ static int options_fill_defaults(struct frame *f, int stack_idx) {
     int offset = 0;
 
 
-
     if (!opt_num) {
         return 0;
     }
@@ -256,7 +256,6 @@ static int options_fill_defaults(struct frame *f, int stack_idx) {
         hdr->fields[i].bit_offset = offset;
         offset = hdr->fields[i].bit_offset + hdr->fields[i].bit_width;
     }
-
     hdr->size = offset / 8;
 
     bfree(b);
