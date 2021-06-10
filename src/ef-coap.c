@@ -26,9 +26,6 @@ enum {
     COAP_PARMS_FIELD_LAST
 };
 
-static buf_t *opt_num;   // TODO remove
-
-
 static buf_t *coap_parse_code(hdr_t *hdr, int hdr_offset, const char *s, int bytes) {
     buf_t   *b = NULL;
     uint8_t tmp;
@@ -96,12 +93,6 @@ buf_t *coap_parse_token(hdr_t *hdr, int hdr_offset, const char *s, int bytes) {
 
 
     return b;
-}
-
-buf_t *coap_parse_opt_num(hdr_t *hdr, int hdr_offset, const char *s, int bytes) {
-    opt_num = parse_bytes(s, 2);
-
-    return 0;
 }
 
 
@@ -194,20 +185,19 @@ static int options_fill_defaults(struct frame *f, int stack_idx) {
     int offset = 0;
 
 
-    if (!opt_num) {
-        return 0;
-    }
-
     hdr_t   *hdr = f->stack[stack_idx];
     field_t *fnum = find_field(hdr, "num");
     field_t *fval = find_field(hdr, "val");
 
-    if (fval){
-        len = fval->val->size; 
-        //vlen = len;
+    if (!fnum) {
+        return 0;
     }
 
-    delta = opt_num->data[0] * 256 + opt_num->data[1];
+    if (fval){
+        len = fval->val->size; 
+    }
+
+    delta = fnum->val->data[0] * 256 + fnum->val->data[1];
 
     b = balloc(5);
     
@@ -246,9 +236,8 @@ static int options_fill_defaults(struct frame *f, int stack_idx) {
     bb = balloc(i);
     memcpy(bb->data,b->data, i);
 
-    if (fnum) {
-        fnum->val = bb;
-    }
+    bfree(fnum->val);
+    fnum->val = bb;
 
     hdr->fields[COAP_OPT_FIELD_NUM].bit_width = fnum->val->size * 8;
 
@@ -264,15 +253,16 @@ static int options_fill_defaults(struct frame *f, int stack_idx) {
 
 static field_t COAP_OPT_FIELDS[] = {  
     [COAP_OPT_FIELD_NUM]
-    { .name = "num",
+    { .name = "num",                    /* holds num and len fields */
       .help = "CoAP Option Number",
-      .bit_width = 0,
-      .parser = coap_parse_opt_num },
+      .bit_width = 16,                  /* will be fixed in options_fill_defaults() */
+    },
     [COAP_OPT_FIELD_VAL]
     { .name = "val",
       .help = "CoAP Option Value",
       .bit_width = 0,
-      .parser_multi = field_parse_multi_var_byte }
+      .parser_multi = field_parse_multi_var_byte 
+    }
 };
 
 static hdr_t HDR_COAP_OPTIONS = {
