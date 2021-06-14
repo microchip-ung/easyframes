@@ -96,30 +96,7 @@ buf_t *coap_parse_token(hdr_t *hdr, int hdr_offset, const char *s, int bytes) {
 }
 
                        
-buf_t *coap_parse_parms_old(hdr_t *hdr, int hdr_offset, const char *s, int bytes) {
-    buf_t *bb, *b;
-
-    bb = parse_var_bytes_hex(s, 1);
-
-    if (!bb) {
-        return 0;
-    }
-
-    b = balloc(bb->size + 1);
-    if (!b) {
-        return 0;
-    }
-    memcpy(b->data + 1, bb->data, bb->size);
-    *(b->data) = 0xFF;
-
-    hdr->fields[COAP_PARMS_FIELD_PAR].bit_width = b->size * 8;
-    hdr->size = b->size;
-
-    bfree(bb);
-    return b;
-}
-
- int coap_parse_parms(hdr_t *hdr, int hdr_offset, struct field *f, int argc, const char *argv[]){
+int coap_parse_parms(hdr_t *hdr, int hdr_offset, struct field *f, int argc, const char *argv[]){
     int res;
     buf_t *b, *bb = 0;
 
@@ -147,8 +124,6 @@ buf_t *coap_parse_parms_old(hdr_t *hdr, int hdr_offset, const char *s, int bytes
         bfree(b);
 
     return 0;
-
-
 }
 
 static int coap_fill_defaults(struct frame *f, int stack_idx) {
