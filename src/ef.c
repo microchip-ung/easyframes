@@ -1,4 +1,4 @@
-#include "ef.h"
+﻿#include "ef.h"
 #include <stdio.h>
 #include <assert.h>
 #include <stdlib.h>
@@ -311,11 +311,11 @@ hdr_t *frame_clone_and_push_hdr(frame_t *f, hdr_t *h) {
 
 int hdr_parse_fields(frame_t *frame, struct hdr *hdr, int offset,
                      int argc, const char *argv[]) {
-    int i, j;
+    int i = 0, j;
     field_t *f;
     int field_ignore = 0;
 
-    for (i = 0; i < argc; ++i) {
+    while (i < argc) {
         if (strcmp(argv[i], "help") == 0) {
             hdr_help(&hdr, 1, 0, 1);
             return -1;
@@ -330,6 +330,7 @@ int hdr_parse_fields(frame_t *frame, struct hdr *hdr, int offset,
                 hdr->fields[j].rx_match_skip = 1;
 
             frame->has_mask = 1;
+            i += 1;
             continue;
         }
 
@@ -341,6 +342,7 @@ int hdr_parse_fields(frame_t *frame, struct hdr *hdr, int offset,
         if (field_ignore) {
             field_ignore = 0;
             f->rx_match_skip = 1;
+            i += 1;
             continue;
         }
 
@@ -355,6 +357,7 @@ int hdr_parse_fields(frame_t *frame, struct hdr *hdr, int offset,
         if (strcmp(argv[i], "ign") == 0 || strcmp(argv[i], "ignore") == 0) {
             frame->has_mask = 1;
             f->rx_match_skip = 1;
+            i += 1;
             continue;
         }
 
@@ -366,8 +369,20 @@ int hdr_parse_fields(frame_t *frame, struct hdr *hdr, int offset,
         //po("Assigned value for %s\n", f->name);
         if (f->parser != NULL) {
             f->val = f->parser(hdr, offset, argv[i], BIT_TO_BYTE(f->bit_width));
+            i += 1;
+        } else if (f->parser_multi != NULL) {
+            int cnt = f->parser_multi(hdr, offset, f, argc - i, argv + i);
+
+            if (cnt > 0 && cnt <= argc - i) {
+                i += cnt;
+            } else {
+                po("ERROR: parser_multi consumed more words than available\n");
+                return -1;
+            }
+
         } else {
             f->val = parse_bytes(argv[i], BIT_TO_BYTE(f->bit_width));
+            i += 1;
         }
         f->rx_match_skip = 0;
     }
@@ -435,6 +450,10 @@ buf_t *frame_to_buf(frame_t *f) {
     size_t offset = 0;
     int frame_size = 0;
 
+    for (i = f->stack_size - 1; i >= 0; --i)
+        if (f->stack[i]->frame_fill_defaults)
+            f->stack[i]->frame_fill_defaults(f, i);
+
     //po("Stack size: %d\n", f->stack_size);
     for (i = 0; i < f->stack_size; ++i) {
         f->stack[i]->offset_in_frame = frame_size;
@@ -443,10 +462,6 @@ buf_t *frame_to_buf(frame_t *f) {
 
     if (frame_size < 60)
         frame_size = 60;
-
-    for (i = f->stack_size - 1; i >= 0; --i)
-        if (f->stack[i]->frame_fill_defaults)
-            f->stack[i]->frame_fill_defaults(f, i);
 
     buf = balloc(frame_size);
 
@@ -561,6 +576,7 @@ void mrp_init();
 void ts_init();
 void profinet_init();
 void opcua_init();
+void coap_init();
 
 void init() __attribute__ ((constructor));
 void init() {
@@ -580,6 +596,7 @@ void init() {
     ts_init();
     profinet_init();
     opcua_init();
+    coap_init();
 }
 
 void ifh_uninit();
@@ -598,6 +615,7 @@ void mrp_uninit();
 void ts_uninit();
 void profinet_uninit();
 void opcua_uninit();
+void coap_uninit();
 
 void uninit() __attribute__ ((destructor));
 void uninit() {
@@ -617,5 +635,6 @@ void uninit() {
     ts_uninit();
     profinet_uninit();
     opcua_uninit();
+    coap_uninit();
 }
 

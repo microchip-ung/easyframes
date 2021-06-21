@@ -1,4 +1,4 @@
-# EasyFraems (`ef`)
+﻿# EasyFrames (`ef`)
 
 This is a small and simple command-line tool for network testing. The tool makes
 it simple to compose a frame, inject and express what and where frames are

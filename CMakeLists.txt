@@ -1,4 +1,4 @@
-
+﻿
 cmake_minimum_required(VERSION 2.8.12)
 
 option(TEST_ENABLE "Enable tests" off)
@@ -55,6 +55,7 @@ add_library(libef STATIC
     src/ef-arp.c
     src/ef-buf.c
     src/ef-capture.c
+    src/ef-coap.c
     src/ef-eth.c
     src/ef-exec.c
     src/ef-icmp.c

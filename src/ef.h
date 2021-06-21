@@ -1,4 +1,4 @@
-#ifndef EF_H
+﻿#ifndef EF_H
 #define EF_H
 
 #include <stdint.h>
@@ -98,6 +98,7 @@ static inline name ## _t *name ## _clone(const name ## _t *src) {              \
 }
 
 struct frame;
+struct field;
 typedef int (*frame_fill_defaults_t)(struct frame *, int stack_idx);
 
 struct hdr;
@@ -105,8 +106,14 @@ typedef int (*hdr_parse_t)(struct frame *frame, struct hdr *hdr, int offset,
                            int argc, const char *argv[]);
 typedef buf_t *(*field_parse_t)(struct hdr *hdr, int hdr_offset, const char *s,
                                 int bytes);
+typedef int (*field_parse_multi_t)(struct hdr *hdr, int hdr_offset,
+                                      struct field *f, int argc,
+                                      const char *argv[]);
 
-typedef struct {
+int field_parse_multi_var_byte(struct hdr *hdr, int hdr_offset, struct field *f,
+                               int argc, const char *argv[]);
+
+typedef struct field {
     const char *name;
     const char *help;
     int         rx_match_skip;
@@ -116,6 +123,7 @@ typedef struct {
     buf_t      *val;
 
     field_parse_t parser;
+    field_parse_multi_t parser_multi;
 } field_t;
 
 int field_copy(field_t *dst, const field_t *src);
@@ -229,6 +237,9 @@ typedef enum {
     HDR_TMPL_OPC_UA,
     HDR_TMPL_PRP_RCT,
     HDR_TMPL_HSR_TAG,
+    HDR_TMPL_COAP,
+    HDR_TMPL_COAP_OPTIONS,
+    HDR_TMPL_COAP_PARMS,
 
     HDR_TMPL_SIZE,
 } hdr_tmpl_t;
