@@ -208,6 +208,7 @@ typedef enum {
     HDR_TMPL_IFH_CRCL, /* Injection frame header */
     HDR_TMPL_EFH_CRCL, /* Extraction frame header */
     HDR_TMPL_IFH_MAS,  /* Internal frame header */
+    HDR_TMPL_IFH_LA,  /* Internal frame header */
     HDR_TMPL_ETH,
     HDR_TMPL_CTAG,
     HDR_TMPL_STAG,
