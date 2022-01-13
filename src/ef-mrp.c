@@ -262,7 +262,7 @@ void mrp_init() {
     def_offset(&HDR_MRP_TST);
     def_val(&HDR_MRP_TST, "version", "1");
     def_val(&HDR_MRP_TST, "t_type", "2");
-    def_val(&HDR_MRP_TST, "t_length", "21");
+    def_val(&HDR_MRP_TST, "t_length", "18");
     def_val(&HDR_MRP_TST, "c_type", "1");
     def_val(&HDR_MRP_TST, "c_length", "18");
     def_val(&HDR_MRP_TST, "e_type", "0");
