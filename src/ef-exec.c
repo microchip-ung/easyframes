@@ -255,7 +255,7 @@ int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
                 } else {
                     print_hex_str(1, b->data, b->size);
                     if (cmd_ptr->frame_mask_buf) {
-                        po("RX-OK MASK:              ");
+                        po("\nRX-OK MASK:              ");
                         print_hex_str(1, cmd_ptr->frame_mask_buf->data,
                                       cmd_ptr->frame_mask_buf->size);
                         po("\n");
