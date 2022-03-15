@@ -251,11 +251,6 @@ static field_t RESPONSE_FIELDS[] = {
     { .name = "rpi-portNumber",
       .help = "",
       .bit_width =   16 },
-
-    /* Padding to get 64 bytes frame */
-    { .name = "padding",
-      .help = "",
-      .bit_width =  6*8 },
 };
 
 static hdr_t HDR_RESPONSE = {
