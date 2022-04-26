@@ -95,7 +95,7 @@ int coap_parse_parms(hdr_t *hdr, int hdr_offset, struct field *f, int argc, cons
 
         f->val = bb;
         f->bit_width = bb->size * 8;
-        hdr->size += bb->size;
+        hdr->size = bb->size;
 
         bfree(b);
 
