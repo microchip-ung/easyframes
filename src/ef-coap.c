@@ -240,6 +240,37 @@ static int options_fill_defaults(struct frame *f, int stack_idx) {
     return 0;
 }
 
+//This is a wrapper around field_parse_multi_var_byte
+//that is used to make sure that a zero value, uses zero length in the buffer.
+static int coap_parse_option_value(struct hdr *hdr, int hdr_offset, struct field *f,
+                                   int argc, const char *argv[])
+{
+    int result = 0;
+    result = field_parse_multi_var_byte(hdr, hdr_offset, f, argc, argv);
+
+    if ((result > 1) && (result <= argc))
+    {
+        //check for zero value
+        int isZero = 1;
+        for (int index = 0; index < ((int)(f->val->size)); index++)
+        {
+            if (f->val->data[index] != 0)
+            {
+                isZero = 0;
+                break;
+            }
+        }
+        if (isZero)
+        {
+            //truncate to zero length
+            hdr->size -= f->val->size;
+            f->val->size = 0;
+            f->bit_width = 0;
+        }
+    }
+    return result;
+}
+
 static field_t COAP_OPT_FIELDS[] = {
     [COAP_OPT_FIELD_NUM]
     { .name = "num",                    /* holds num and len fields */
@@ -250,7 +281,7 @@ static field_t COAP_OPT_FIELDS[] = {
     { .name = "val",
       .help = "CoAP Option Value",
       .bit_width = 0,
-      .parser_multi = field_parse_multi_var_byte
+      .parser_multi = coap_parse_option_value
     }
 };
 
