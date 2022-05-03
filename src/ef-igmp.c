@@ -2,10 +2,26 @@
 #include "ef.h"
 
 static int igmp_fill_defaults(struct frame *f, int stack_idx) {
-    int i, igmp_len = 0;
+    int i, igmp_len = 0, found = 0;
     char buf[16];
     hdr_t *h = f->stack[stack_idx];
-    field_t *chksum = find_field(h, "chksum");
+    field_t *chksum = find_field(h, "chksum"), *fld;
+    const char *v3_fields[] = {"resv", "s", "qrv", "qqic", "ns"};
+
+    // If none of the fields "resv", "s", qrv" "qqic", or "ns" are present,
+    // we adjust the size to 4 bytes less. Otherwise the receiver will always
+    // interpret this as an IGMPv3 query.
+    for (i = 0; i < sizeof(v3_fields) / sizeof(v3_fields[0]); i++) {
+        fld = find_field(h, v3_fields[i]);
+        if (fld->val || fld->def) {
+            found = 1;
+            break;
+        }
+    }
+
+    if (!found) {
+        h->size -= 4;
+    }
 
     for (i = stack_idx; i < f->stack_size; ++i) {
         igmp_len += f->stack[i]->size;
@@ -60,7 +76,7 @@ static field_t IGMP_FIELDS[] = {
       .bit_width =   8 },
     { .name = "ns",
       .help = "Number of Sources (IGMPv3)",
-      .bit_width =   8 },
+      .bit_width =   16 },
 };
 
 static hdr_t HDR_IGMP = {
