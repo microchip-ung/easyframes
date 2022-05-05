@@ -255,6 +255,19 @@ void hdr_write_field(buf_t *b, int offset, const field_t *f, const buf_t *val)
     // val           = Value to write
     // val->size     = Number of bytes in value to write
     // val->data     = Buffer of val->size bytes.
+
+#if 0
+    {
+        char d[100], *p = d;
+
+        for (int i = 0; i < val->size; i++) {
+            p += sprintf(p, "%02x%s", val->data[i], i == val->size - 1 ? "\n" : "");
+        }
+
+        po("f->name = %-10s, b->size = %zu: f->bit_width = %3u, f->bit_offset = %3u, offset = %3u, val = %s", f->name, b->size, f->bit_width, f->bit_offset, offset, d);
+    }
+#endif
+
     assert(8 * b->size >= (size_t)f->bit_width + f->bit_offset + offset * 8);
 
     // How many bits do we have to move into the value to encode before we reach
@@ -568,6 +581,7 @@ void ipv4_init();
 void ipv6_init();
 void icmp_init();
 void igmp_init();
+void mld_init();
 void udp_init();
 void payload_init();
 void padding_init();
@@ -588,6 +602,7 @@ void init() {
     ipv6_init();
     icmp_init();
     igmp_init();
+    mld_init();
     udp_init();
     payload_init();
     padding_init();
@@ -607,6 +622,7 @@ void ipv4_uninit();
 void ipv6_uninit();
 void icmp_uninit();
 void igmp_uninit();
+void mld_uninit();
 void udp_uninit();
 void payload_uninit();
 void padding_uninit();
@@ -627,6 +643,7 @@ void uninit() {
     ipv6_uninit();
     icmp_uninit();
     igmp_uninit();
+    mld_uninit();
     udp_uninit();
     payload_uninit();
     padding_uninit();

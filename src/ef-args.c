@@ -288,7 +288,7 @@ int argc_cmds(int argc, const char *argv[]) {
     }
 
     if (i != argc) {
-        po("Parse error! %d %d %d\n", i, argc, cmd_idx);
+        po("Parse error! arg# %d out of %d, cmd_idx = %d\n", i, argc, cmd_idx);
         return -1;
     }
 
