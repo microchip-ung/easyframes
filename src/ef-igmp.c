@@ -30,7 +30,7 @@ static int igmp_fill_defaults(struct frame *f, int stack_idx) {
             fld->bit_width = 0;
         }
 
-        po("Adjusted IGMPv3 query fields' bit-widths to 0\n");
+        // po("Adjusted IGMPv3 query fields' bit-widths to 0\n");
     }
 
     // If none of the fields "rresv" or "ng" are present, we adjust the size to
@@ -54,7 +54,7 @@ static int igmp_fill_defaults(struct frame *f, int stack_idx) {
             fld->bit_width = 0;
         }
 
-        po("Adjusted IGMPv3 report fields' bit-widths to 0\n");
+        // po("Adjusted IGMPv3 report fields' bit-widths to 0\n");
     } else {
         // At least one of the IGMPv3 report fields are present, so remove the
         // Group Address, which is then only used in queries.
@@ -68,7 +68,7 @@ static int igmp_fill_defaults(struct frame *f, int stack_idx) {
         fld = find_field(h, "ng");
         fld->bit_offset = 48;
 
-        po("Adjusted IGMPv1/IGMPv2 \"ga\" field's bit-width to 0, because it's not used in IGMPv3 reports\n");
+        // po("Adjusted IGMPv1/IGMPv2 \"ga\" field's bit-width to 0, because it's not used in IGMPv3 reports\n");
     }
 
     if (chksum->val) {

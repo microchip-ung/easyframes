@@ -40,7 +40,7 @@ static int mld_fill_defaults(struct frame *f, int stack_idx) {
             fld->bit_width = 0;
         }
 
-        po("Adjusted MLDv2 query fields' bit-widths to 0\n");
+        // po("Adjusted MLDv2 query fields' bit-widths to 0\n");
     }
 
     // If none of the fields "rresv" or "ng" are present, we adjust the size to
@@ -64,7 +64,7 @@ static int mld_fill_defaults(struct frame *f, int stack_idx) {
             fld->bit_width = 0;
         }
 
-        po("Adjusted MLDv2 report fields' bit-widths to 0\n");
+        // po("Adjusted MLDv2 report fields' bit-widths to 0\n");
     } else {
         // At least one of the MLDv2 report fields are present, so remove the
         // Group Address, Maximum Response Code, and Reserved, which are only
@@ -83,7 +83,7 @@ static int mld_fill_defaults(struct frame *f, int stack_idx) {
         fld = find_field(h, "ng");
         fld->bit_offset = 48;
 
-        po("Adjusted MLDv1 \"ga\" field's bit-width to 0, because it's not used in MLDv2 reports\n");
+        // po("Adjusted MLDv1 \"ga\" field's bit-width to 0, because it's not used in MLDv2 reports\n");
     }
 
     if (chksum->val) {
