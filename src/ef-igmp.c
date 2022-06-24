@@ -2,6 +2,7 @@
 #include "ef.h"
 
 static int igmp_fill_defaults(struct frame *f, int stack_idx) {
+    size_t     i2;
     int        i, found = 0, offset = 0, sum = 0, igmp_len = 0;
     char       buf[16];
     hdr_t      *h = f->stack[stack_idx];
@@ -13,8 +14,8 @@ static int igmp_fill_defaults(struct frame *f, int stack_idx) {
     // If none of the fields "qresv", "s", qrv" "qqic", or "ns" are present,
     // we adjust the size to 4 bytes less. Otherwise the receiver will always
     // interpret this as an IGMPv3 query.
-    for (i = 0; i < sizeof(v3_query_fields) / sizeof(v3_query_fields[0]); i++) {
-        fld = find_field(h, v3_query_fields[i]);
+    for (i2 = 0; i2 < sizeof(v3_query_fields) / sizeof(v3_query_fields[0]); i2++) {
+        fld = find_field(h, v3_query_fields[i2]);
         if (fld->val || fld->def) {
             found = 1;
             break;
@@ -25,8 +26,8 @@ static int igmp_fill_defaults(struct frame *f, int stack_idx) {
         h->size -= 4;
 
         // Also adjust the bit-widths to 0 in order to support IGMPv3 reports.
-        for (i = 0; i < sizeof(v3_query_fields) / sizeof(v3_query_fields[0]); i++) {
-            fld = find_field(h, v3_query_fields[i]);
+        for (i2 = 0; i2 < sizeof(v3_query_fields) / sizeof(v3_query_fields[0]); i2++) {
+            fld = find_field(h, v3_query_fields[i2]);
             fld->bit_width = 0;
         }
 
@@ -37,8 +38,8 @@ static int igmp_fill_defaults(struct frame *f, int stack_idx) {
     // 4 bytes less. Otherwise the receiver will interpret this as an IGMPv3
     // report.
     found = 0;
-    for (i = 0; i < sizeof(v3_report_fields) / sizeof(v3_report_fields[0]); i++) {
-        fld = find_field(h, v3_report_fields[i]);
+    for (i2 = 0; i2 < sizeof(v3_report_fields) / sizeof(v3_report_fields[0]); i2++) {
+        fld = find_field(h, v3_report_fields[i2]);
         if (fld->val || fld->def) {
             found = 1;
             break;
@@ -49,8 +50,8 @@ static int igmp_fill_defaults(struct frame *f, int stack_idx) {
         h->size -= 4;
 
         // Also adjust the bit-widths to 0 in order to support IGMPv3 Queries.
-        for (i = 0; i < sizeof(v3_report_fields) / sizeof(v3_report_fields[0]); i++) {
-            fld = find_field(h, v3_report_fields[i]);
+        for (i2 = 0; i2 < sizeof(v3_report_fields) / sizeof(v3_report_fields[0]); i2++) {
+            fld = find_field(h, v3_report_fields[i2]);
             fld->bit_width = 0;
         }
 
