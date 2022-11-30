@@ -72,6 +72,7 @@ add_library(libef STATIC
     src/ef-payload.c
     src/ef-profinet.c
     src/ef-ptp.c
+    src/ef-sv.c
     src/ef-udp.c
     src/ef-vlan.c
     ${version_file}

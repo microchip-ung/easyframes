@@ -591,6 +591,7 @@ void ts_init();
 void profinet_init();
 void opcua_init();
 void coap_init();
+void sv_init();
 
 void init() __attribute__ ((constructor));
 void init() {
@@ -612,6 +613,7 @@ void init() {
     profinet_init();
     opcua_init();
     coap_init();
+    sv_init();
 }
 
 void ifh_uninit();
@@ -632,6 +634,7 @@ void ts_uninit();
 void profinet_uninit();
 void opcua_uninit();
 void coap_uninit();
+void sv_uninit();
 
 void uninit() __attribute__ ((destructor));
 void uninit() {
@@ -653,5 +656,6 @@ void uninit() {
     profinet_uninit();
     opcua_uninit();
     coap_uninit();
+    sv_uninit();
 }
 
