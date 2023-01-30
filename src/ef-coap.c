@@ -130,24 +130,24 @@ static field_t COAP_FIELDS[] = {
     { .name = "ver",
       .help = "CoAP version number, has to be 1",
       .bit_width =  2 },
-    [COAP_FIELD_TYPE]
+    [COAP_FIELD_TYPE] =
     { .name = "type",
       .help = "message type: Confirmable (0), Non-confirmable (1), Acknowledgement (2), or Reset (3)",
       .bit_width =  2 },
-    [COAP_FIELD_TOKEN_LENGTH]
+    [COAP_FIELD_TOKEN_LENGTH] =
     { .name = "tkl",
       .help = "Token length, 0-8 bytes",
       .bit_width =  4  },
-    [COAP_FIELD_CODE]
+    [COAP_FIELD_CODE] =
     { .name = "code",
       .help = "message code, split into a 3-bit class and a 5-bit detail e.g. 0.01 (GET) or 4.04 (Not found)",
       .bit_width =  8,
       .parser = coap_parse_code },
-    [COAP_FIELD_MESSAGE_ID]
+    [COAP_FIELD_MESSAGE_ID] =
     { .name = "msgid",
       .help = "Used to detect message duplication and to match messages",
       .bit_width =  16 },
-    [COAP_FIELD_TOKEN]
+    [COAP_FIELD_TOKEN] =
     { .name = "token",
       .help = "Token length must not greater than 8 bytes. (optional)",
       .bit_width = 0,
@@ -272,12 +272,12 @@ static int coap_parse_option_value(struct hdr *hdr, int hdr_offset, struct field
 }
 
 static field_t COAP_OPT_FIELDS[] = {
-    [COAP_OPT_FIELD_NUM]
+    [COAP_OPT_FIELD_NUM] =
     { .name = "num",                    /* holds num and len fields */
       .help = "CoAP Option Number",
       .bit_width = 16,                  /* will be fixed in options_fill_defaults() */
     },
-    [COAP_OPT_FIELD_VAL]
+    [COAP_OPT_FIELD_VAL] =
     { .name = "val",
       .help = "CoAP Option Value",
       .bit_width = 0,
@@ -299,7 +299,7 @@ static int parameters_fill_defaults(struct frame *f, int stack_idx) {
 }
 
 static field_t COAP_PARMS_FIELDS[] = {
-    [COAP_PARMS_FIELD_PAR]
+    [COAP_PARMS_FIELD_PAR] =
     { .name = "par",
       .help = "CoAP Parameter field.",
       .bit_width = 0,
