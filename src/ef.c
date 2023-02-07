@@ -359,6 +359,11 @@ int hdr_parse_fields(frame_t *frame, struct hdr *hdr, int offset,
             continue;
         }
 
+        // If a field is specified twice on the command-line then we need this
+        // to avoid memory leak
+        bfree(f->val);
+        f->val = 0;
+
         i += 1;
 
         // Check to see if we have a value argument
