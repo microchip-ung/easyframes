@@ -6,7 +6,7 @@ static int mld_fill_defaults(struct frame *f, int stack_idx) {
     int        i, found = 0, offset = 0, sum, mld_len;
     size_t     i2;
     char       buf[16];
-    hdr_t      *h = f->stack[stack_idx], *ip_hdr;
+    hdr_t      *h = f->stack[stack_idx], *ip_hdr = f->stack[0];
     field_t    *chksum = find_field(h, "chksum"), *fld, *sip = NULL, *dip = NULL;
     uint8_t   *ptr;
     buf_t      *b;
