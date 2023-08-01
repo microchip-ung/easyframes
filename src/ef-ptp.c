@@ -121,6 +121,11 @@ static field_t SYNC_FIELDS[] = {
       .help = "",
       .bit_offset =  0,
       .bit_width =   32 },
+
+    /* Padding to get 64 bytes frame */
+    { .name = "padding",
+      .help = "",
+      .bit_width =  2*8 }
 };
 
 static hdr_t HDR_SYNC = {
