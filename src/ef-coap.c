@@ -178,7 +178,7 @@ static int options_fill_defaults(struct frame *f, int stack_idx) {
     field_t *fnum = find_field(hdr, "num");
     field_t *fval = find_field(hdr, "val");
 
-    if (!fnum) {
+    if (!fnum->val || !fval->val) {
         return 0;
     }
 
