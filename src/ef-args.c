@@ -9,6 +9,11 @@ int argc_frame(int argc, const char *argv[], frame_t *f) {
     int i, j, res, offset;
     hdr_t *h;
 
+    if(argc > FRAME_STACK_MAX) {
+        po("ERROR: Frame stack size is too big");
+        return -1;
+    }
+
     offset = 0;
     frame_reset(f);
 
