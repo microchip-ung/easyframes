@@ -26,6 +26,9 @@ static buf_t *profinet_data_parser(hdr_t *hdr, int hdr_offset, const char *s,
     buf_t *b;
 
     b = parse_var_bytes_hex(s, 40);
+    if(b == NULL) {
+        return b;
+    }
     hdr->fields[PNET_RTC_FIELD_DATA].bit_width = b->size * 8;
 
     for (i = 0; i < PNET_RTC_FIELD_LAST; ++i) {
