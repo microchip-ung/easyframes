@@ -8,18 +8,20 @@ static int mld_fill_defaults(struct frame *f, int stack_idx) {
     char       buf[16];
     hdr_t      *h = f->stack[stack_idx], *ip_hdr = f->stack[0];
     field_t    *chksum = find_field(h, "chksum"), *fld, *sip = NULL, *dip = NULL;
-    uint8_t   *ptr;
+    uint16_t   *ptr;
     buf_t      *b;
     const char *v2_query_fields[]  = {"qresv", "s", "qrv", "qqic", "ns"};
     const char *v2_report_fields[] = {"rresv", "ng"};
 
+    // In order to be able to cast this packed structure to an uint16_t *, it
+    // must be 2-byte aligned.
     struct {
         uint8_t     sip[16];
         uint8_t     dip[16];
         uint32_t    len;
         uint8_t     zeros[3];
         uint8_t     next_hdr;
-    } __attribute__((packed)) pseudo_hdr;
+    } __attribute__((packed, aligned(2))) pseudo_hdr;
 
     // If none of the fields "qresv", "s", qrv" "qqic", or "ns" are present,
     // we adjust the size to 4 bytes less. Otherwise the receiver will always
@@ -150,14 +152,10 @@ static int mld_fill_defaults(struct frame *f, int stack_idx) {
     // 16-bit values without folding. Notice that we expect the pseudo header to
     // be an even number of bytes.
     sum = 0;
-    
-    ptr = (uint8_t *)&pseudo_hdr;
+
+    ptr = (uint16_t *)&pseudo_hdr;
     for (i2 = 0; i2 < sizeof(pseudo_hdr); i2 += 2) {
-        //make sure each value is read in big endian
-        uint16_t value = (((uint16_t)(ptr[0])) << 8) |
-                          (uint16_t)(ptr[1]);
-        sum += value;
-        ptr+=2;
+        sum += *ptr++;
     }
 
     // Then serialize the MLD message
