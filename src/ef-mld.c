@@ -8,7 +8,7 @@ static int mld_fill_defaults(struct frame *f, int stack_idx) {
     char       buf[16];
     hdr_t      *h = f->stack[stack_idx], *ip_hdr = f->stack[0];
     field_t    *chksum = find_field(h, "chksum"), *fld, *sip = NULL, *dip = NULL;
-    uint8_t   *ptr;
+    uint8_t    *ptr;
     buf_t      *b;
     const char *v2_query_fields[]  = {"qresv", "s", "qrv", "qqic", "ns"};
     const char *v2_report_fields[] = {"rresv", "ng"};
@@ -150,15 +150,21 @@ static int mld_fill_defaults(struct frame *f, int stack_idx) {
     // 16-bit values without folding. Notice that we expect the pseudo header to
     // be an even number of bytes.
     sum = 0;
-    
+
+    // We would have liked to convert pseudo_hdr to an uint16_t * and sum up the
+    // pseudo_hdr's values in the host's native endianness, because it's
+    // compatible with the way inet_chksum() sums up. But since pseudo_hdr is a
+    // packed structure, it has alignment 1, which cannot be safely converted to
+    // a 16-bit pointer. So we start by summing up in big-endian.
     ptr = (uint8_t *)&pseudo_hdr;
     for (i2 = 0; i2 < sizeof(pseudo_hdr); i2 += 2) {
-        //make sure each value is read in big endian
-        uint16_t value = (((uint16_t)(ptr[0])) << 8) |
-                          (uint16_t)(ptr[1]);
-        sum += value;
-        ptr+=2;
+        sum += ((uint16_t)ptr[0] << 8) | (uint16_t)ptr[1];
+        ptr += 2;
     }
+
+    // Then convert the sum to the local endianness, which is compatible with
+    // inet_chksum().
+    sum = ntohl(sum);
 
     // Then serialize the MLD message
     b = balloc(mld_len);
