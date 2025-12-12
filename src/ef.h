@@ -151,7 +151,7 @@ void hdr_destruct(hdr_t*f);
 GEN_ALLOC_CLONE_FREE(hdr);
 
 typedef struct frame {
-#define FRAME_STACK_MAX 100
+#define FRAME_STACK_MAX 200
     hdr_t *stack[FRAME_STACK_MAX];
     int    stack_size;
     int    padding_len;
