@@ -314,12 +314,10 @@ void frame_reset(frame_t *f) {
 }
 
 hdr_t *frame_clone_and_push_hdr(frame_t *f, hdr_t *h) {
-    hdr_t *new_hdr = hdr_clone(h);
+    if (f->stack_size >= FRAME_STACK_MAX)
+        return NULL;
 
-    f->stack[f->stack_size] = new_hdr;
-    f->stack_size ++;
-
-    return new_hdr;
+    return f->stack[f->stack_size++] = hdr_clone(h);
 }
 
 int hdr_parse_fields(frame_t *frame, struct hdr *hdr, int offset,
