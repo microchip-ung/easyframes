@@ -126,6 +126,7 @@ add_executable(ef-tests
     test/test-alloc-free.cxx
     test/test-mld-zero-width.cxx
     test/test-rate-limit.cxx
+    test/test-rx-ign.cxx
 )
 target_compile_options(ef-tests PRIVATE ${EF_SANITIZE_FLAGS})
 

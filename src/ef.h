@@ -335,6 +335,8 @@ typedef struct cmd {
     buf_t      *frame_mask_buf;
     int         done;
     int         rep_explicit; // user passed 'rep N' (rate-without-rep is 0)
+    int         rx_ign;     // rx ignore: match silently, never fail
+    size_t      frame_size_no_padding;
     uint32_t    repeat;
 
     uint32_t        rate_pps;   // 0 = unlimited
@@ -389,6 +391,7 @@ void   txring_close(cmd_t *c);
 void print_hex_str(int fd, void *_d, int s);
 
 int argc_frame(int argc, const char *argv[], frame_t *f);
+int argc_cmd(int argc, const char *argv[], cmd_t *c);
 void cmd_destruct(cmd_t *c);
 
 void print_help();
