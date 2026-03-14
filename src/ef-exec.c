@@ -230,11 +230,14 @@ int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
                 }
             }
 
-            // Try to match the frame agains expected frames
+            // Try to match against expected (non-ign) rx commands first
             match = 0;
             for (cmd_ptr = resources[i].cmd; cmd_ptr; cmd_ptr = cmd_ptr->next) {
 
                 if (!cmd_ptr->frame_buf)
+                    continue;
+
+                if (cmd_ptr->rx_ign)
                     continue;
 
                 if (cmd_ptr->done)
@@ -248,20 +251,50 @@ int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
                 }
             }
 
-            if (match) {
-                po("RX-OK  %16s: ", cmd_ptr->arg0);
-                if (cmd_ptr->name) {
-                    po("name %s", cmd_ptr->name);
-                } else {
-                    print_hex_str(1, b->data, b->size);
-                    if (cmd_ptr->frame_mask_buf) {
-                        po("\nRX-OK MASK:              ");
-                        print_hex_str(1, cmd_ptr->frame_mask_buf->data,
-                                      cmd_ptr->frame_mask_buf->size);
-                        po("\n");
+            // If no regular match, try ign rx commands
+            if (!match) {
+                for (cmd_ptr = resources[i].cmd; cmd_ptr;
+                     cmd_ptr = cmd_ptr->next) {
+                    if (!cmd_ptr->frame_buf)
+                        continue;
+
+                    if (!cmd_ptr->rx_ign)
+                        continue;
+
+                    if (b->size < cmd_ptr->frame_buf->size)
+                        continue;
+
+                    // Temporarily shorten rx frame to pattern length
+                    // so trailing bytes are not checked
+                    size_t orig_size = b->size;
+                    b->size = cmd_ptr->frame_buf->size;
+                    int m = bequal_mask(b, cmd_ptr->frame_buf,
+                                        cmd_ptr->frame_mask_buf, 0);
+                    b->size = orig_size;
+                    if (m) {
+                        match = 1;
+                        // Don't mark done as ign absorbs multiple frames
+                        break;
                     }
                 }
-                po("\n");
+            }
+
+            if (match) {
+                if (!cmd_ptr->rx_ign) {
+                    po("RX-OK  %16s: ", cmd_ptr->arg0);
+                    if (cmd_ptr->name) {
+                        po("name %s", cmd_ptr->name);
+                    } else {
+                        print_hex_str(1, b->data, b->size);
+                        if (cmd_ptr->frame_mask_buf) {
+                            po("\nRX-OK MASK:              ");
+                            print_hex_str(1, cmd_ptr->frame_mask_buf->data,
+                                          cmd_ptr->frame_mask_buf->size);
+                            po("\n");
+                        }
+                    }
+                    po("\n");
+                }
             } else {
                 resources[i].rx_err_cnt ++;
                 pe("RX-ERR %16s: ", resources[i].cmd->arg0);
@@ -516,6 +549,9 @@ int exec_cmds(int cnt, cmd_t *cmds) {
 
         for (cmd_ptr = resources[i].cmd; cmd_ptr; cmd_ptr = cmd_ptr->next) {
             if (cmd_ptr->type != CMD_TYPE_RX)
+                continue;
+
+            if (cmd_ptr->rx_ign)
                 continue;
 
             if (!cmd_ptr->frame_buf)

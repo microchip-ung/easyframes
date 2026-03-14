@@ -290,6 +290,7 @@ typedef struct cmd {
     buf_t      *frame_buf;
     buf_t      *frame_mask_buf;
     int         done;
+    int         rx_ign;     // rx ignore: match silently, never fail
     uint32_t    repeat;
 } cmd_t;
 
@@ -306,6 +307,7 @@ int exec_cmds(int cnt, cmd_t *cmds);
 void print_hex_str(int fd, void *_d, int s);
 
 int argc_frame(int argc, const char *argv[], frame_t *f);
+int argc_cmd(int argc, const char *argv[], cmd_t *c);
 void cmd_destruct(cmd_t *c);
 
 void print_help();

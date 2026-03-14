@@ -95,9 +95,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 add_executable(ef-tests
     test/ef-test.cxx
     test/ef-tests.cxx
+    test/ifh-ignore.cxx
     test/test-ef-parse-bytes.cxx
     test/test-padding.cxx
-    test/ifh-ignore.cxx
+    test/test-rx-ign.cxx
 )
 
 target_link_libraries(ef-tests libef)

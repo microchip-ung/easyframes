@@ -120,7 +120,12 @@ void print_help() {
     po("  rx: Specify a frame which is expected to be received. If no \n");
     po("      frame is specified, then the expectation is that no\n");
     po("      frames are received on the interface. Syntax:\n");
-    po("  rx <interface> [FRAME] | help\n");
+    po("  rx <interface> [ign] [FRAME] | help\n");
+    po("      With 'ign', matching frames are silently ignored (no RX-ERR)\n");
+    po("      and no error is reported if the frame never arrives (no NO-RX).\n");
+    po("      Frames longer than the pattern also match (trailing bytes are\n");
+    po("      ignored), so the pattern only needs to cover the fixed headers.\n");
+    po("      Useful for filtering known noise (IPv6 RA/RS, HSR supervision).\n");
     po("\n");
     po("  hex: Print a frame on stdout as a hex string. Syntax:\n");
     po("  hex FRAME\n");
@@ -222,6 +227,12 @@ int argc_cmd(int argc, const char *argv[], cmd_t *c) {
 
         default:
             ;
+    }
+
+    if (c->type == CMD_TYPE_RX && i < argc &&
+        (strcmp(argv[i], "ign") == 0 || strcmp(argv[i], "ignore") == 0)) {
+        c->rx_ign = 1;
+        i += 1;
     }
 
     if (c->type == CMD_TYPE_TX) {
