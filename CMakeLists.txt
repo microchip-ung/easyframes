@@ -73,6 +73,7 @@ add_library(libef STATIC
     src/ef-payload.c
     src/ef-profinet.c
     src/ef-ptp.c
+    src/ef-rate.c
     src/ef-sv.c
     src/ef-udp.c
     src/ef-vlan.c
@@ -98,6 +99,7 @@ add_executable(ef-tests
     test/ifh-ignore.cxx
     test/test-ef-parse-bytes.cxx
     test/test-padding.cxx
+    test/test-rate-limit.cxx
     test/test-rx-ign.cxx
 )
 

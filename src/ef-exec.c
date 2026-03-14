@@ -120,7 +120,7 @@ int add_cmd_to_resource(cmd_t *c, int res_max, int res_valid,
 }
 
 int rfds_wfds_fill(cmd_socket_t *resources, int res_valid, fd_set *rfds,
-                   fd_set *wfds) {
+                   fd_set *wfds, int has_rate) {
     cmd_t *cmd_ptr;
     int i, fd_set_cnt, fd_max;
 
@@ -143,7 +143,7 @@ int rfds_wfds_fill(cmd_socket_t *resources, int res_valid, fd_set *rfds,
 
             // Only TX is not done
             if (cmd_ptr->type == CMD_TYPE_TX && cmd_ptr->done == 0)
-                resources[i].has_tx = 1;
+                resources[i].has_tx = resources[i].has_tx || !has_rate || rate_can_send(cmd_ptr);
 
             cmd_ptr = cmd_ptr->next;
         }
@@ -168,7 +168,7 @@ int rfds_wfds_fill(cmd_socket_t *resources, int res_valid, fd_set *rfds,
 }
 
 int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
-                      fd_set *wfds) {
+                      fd_set *wfds, int has_rate) {
     int i, res, match, old_size, tx_done;
     buf_t *b;
     cmd_t *cmd_ptr;
@@ -307,13 +307,55 @@ int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
         bfree(b);
     }
 
-    while(1) {
-        tx_done = 1;
+    if (!has_rate) {
+        while(1) {
+            tx_done = 1;
+            for (i = 0; i < res_valid; i++) {
+                if (!FD_ISSET(resources[i].fd, wfds))
+                    continue;
+
+                // TX the first not "done" frame.
+                for (cmd_ptr = resources[i].cmd; cmd_ptr; cmd_ptr = cmd_ptr->next) {
+                    if (cmd_ptr->type != CMD_TYPE_TX)
+                        continue;
+
+                    if (cmd_ptr->done)
+                        continue;
+
+                    b = cmd_ptr->frame_buf;
+                    res = send(resources[i].fd, b->data, b->size, 0);
+                    cmd_ptr->repeat--;
+
+                    if (cmd_ptr->repeat > 0) {
+                        tx_done = 0;
+                    }
+
+                    if ((size_t)res == b->size && cmd_ptr->repeat == 0) {
+                        po("TX     %16s: ", cmd_ptr->arg0);
+                        if (cmd_ptr->name) {
+                            po("name %s", cmd_ptr->name);
+                        } else {
+                            print_hex_str(1, b->data, b->size);
+                        }
+                        po("\n");
+                        cmd_ptr->done = 1;
+                    }
+                    break;
+                }
+            }
+            if (tx_done > 0)
+                break;
+        }
+    } else {
+        // Single-pass mode: one frame per cmd that has tokens.
+        // With -i (independent TX), use MSG_DONTWAIT so backpressure on one
+        // socket cannot stall sends on another.
+        int send_flags = INDEPENDENT_TX ? MSG_DONTWAIT : 0;
+
         for (i = 0; i < res_valid; i++) {
             if (!FD_ISSET(resources[i].fd, wfds))
                 continue;
 
-            // TX the first not "done" frame.
             for (cmd_ptr = resources[i].cmd; cmd_ptr; cmd_ptr = cmd_ptr->next) {
                 if (cmd_ptr->type != CMD_TYPE_TX)
                     continue;
@@ -321,13 +363,16 @@ int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
                 if (cmd_ptr->done)
                     continue;
 
-                b = cmd_ptr->frame_buf;
-                res = send(resources[i].fd, b->data, b->size, 0);
-                cmd_ptr->repeat--;
+                if (!rate_can_send(cmd_ptr))
+                    continue;
 
-                if (cmd_ptr->repeat > 0) {
-                    tx_done = 0;
-                }
+                b = cmd_ptr->frame_buf;
+                res = send(resources[i].fd, b->data, b->size, send_flags);
+                if (res < 0)
+                    break; // EAGAIN or error — skip resource
+
+                rate_consume(cmd_ptr);
+                cmd_ptr->repeat--;
 
                 if ((size_t)res == b->size && cmd_ptr->repeat == 0) {
                     po("TX     %16s: ", cmd_ptr->arg0);
@@ -342,8 +387,6 @@ int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
                 break;
             }
         }
-        if (tx_done > 0)
-            break;
     }
 
     return 0;
@@ -408,10 +451,25 @@ int pcap_append(cmd_t *c) {
 }
 #endif
 
+// Returns 0 if we are out of time (tv_left ~0) and 1 otherwise.
+static int update_timeleft(struct timeval *tv_now, struct timeval *tv_end,
+                           struct timeval *tv_left, int tx_pending)
+{
+    gettimeofday(tv_now, 0);
+    if (timercmp(tv_now, tv_end, >)) {
+        if (!tx_pending)
+            return 1;
+        *tv_end = *tv_now;
+    }
+    timersub(tv_end, tv_now, tv_left);
+    return 0;
+}
+
 int exec_cmds(int cnt, cmd_t *cmds) {
     struct timeval tv_now, tv_left, tv_begin, tv_end;
     int i, res, fd_max, err = 0;
     int res_valid = 0;
+    int has_rate = 0;
     cmd_socket_t resources[100] = {};
     fd_set rfds, wfds;
     cmd_t *cmd_ptr;
@@ -500,6 +558,19 @@ int exec_cmds(int cnt, cmd_t *cmds) {
             return -1;
     }
 
+    // Scan for rate-limited TX cmds and initialize their token buckets
+    for (i = 0; i < cnt; i++) {
+        if (cmds[i].type == CMD_TYPE_TX && cmds[i].rate_pps > 0) {
+            has_rate = 1;
+            rate_init(&cmds[i]);
+        }
+    }
+
+    // Independent TX mode: force single-pass select-driven loop so each
+    // interface sends independently without blocking others.
+    if (INDEPENDENT_TX)
+        has_rate = 1;
+
     if (SIGNAL_READY)
         pe("EF-READY\n");
 
@@ -513,26 +584,39 @@ int exec_cmds(int cnt, cmd_t *cmds) {
 
     gettimeofday(&tv_begin, 0);
     timeradd(&tv_begin, &tv_left, &tv_end);
+    int tx_pending = 0;
     while (1) {
-        fd_max = rfds_wfds_fill(resources, res_valid, &rfds, &wfds);
+        if (has_rate) {
+            tx_pending = rate_refill_cmds(cnt, cmds, &tv_left);
+            if (!tx_pending)
+                    has_rate = 0; // fall back to non-ratelimited logic
+        }
+
+        fd_max = rfds_wfds_fill(resources, res_valid, &rfds, &wfds, has_rate);
         if (fd_max < 0) {
-            break;
+            if (!tx_pending)
+                break;
+
+            // No fds ready but is TX pending, so sleep to wait for tokens and
+            // repoll the fds
+            res = select(0, NULL, NULL, NULL, &tv_left);
+            update_timeleft(&tv_now, &tv_end, &tv_left, 1);
+            continue;
         }
 
         res = select(fd_max + 1, &rfds, &wfds, 0, &tv_left);
-        gettimeofday(&tv_now, 0);
-        if (timercmp(&tv_now, &tv_end, >)) {
+        if (update_timeleft(&tv_now, &tv_end, &tv_left, tx_pending))
             break;
-        }
-        timersub(&tv_end, &tv_now, &tv_left);
 
         if (res == 0) {
+            if (tx_pending)
+                continue; // no ready fds, hit pacing timeout so go again
             break;
         } else if (res < 0) {
             break;
         }
 
-        rfds_wfds_process(resources, res_valid, &rfds, &wfds);
+        rfds_wfds_process(resources, res_valid, &rfds, &wfds, has_rate);
     }
 
     // close resources

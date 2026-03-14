@@ -97,6 +97,10 @@ void print_help() {
     po("  -h                    Top level help message.\n");
     po("  -p                    No pad. Skip padding frames to 60 bytes,\n");
     po("     allowing runt frames to be sent or matched as-is.\n");
+    po("  -i                    Independent TX mode. Each TX interface sends\n");
+    po("     independently via select(), so backpressure on one socket\n");
+    po("     does not stall others. Useful for multi-stream tests (e.g.\n");
+    po("     ETS) where each ingress port needs its own rate.\n");
     po("  -t <timeout-in-ms>    When listening on an interface (rx),\n");
     po("     When listening on an interface (rx), the tool will always\n");
     po("     listen during the entire timeout period. This is needed,\n");
@@ -115,7 +119,7 @@ void print_help() {
     po("\n");
     po("Valid commands:\n");
     po("  tx: Transmit a frame on a interface. Syntax:\n");
-    po("  tx <interface> FRAME | help\n");
+    po("  tx <interface> [rep <N>] [rate <pps>] FRAME | help\n");
     po("\n");
     po("  rx: Specify a frame which is expected to be received. If no \n");
     po("      frame is specified, then the expectation is that no\n");
@@ -172,6 +176,25 @@ void print_help() {
     po("   ef tx eth0 rep 1000000 eth dmac ::1 smac ::2\n");
     po("   Note that the repeat flag must follow the tx <interface> key-word\n");
     po("   Results must be viewed through the PC or DUT interface counters, i.e. outside of 'ef'\n");
+    po("\n");
+    po("TX rate limiting:\n");
+    po("   'rate <pps>' limits TX to the given packets per second.\n");
+    po("   'rate <N>K|M|G' limits TX to the given wire rate in Kbps/Mbps/Gbps.\n");
+    po("   Wire rate includes preamble, SFD, FCS and IFG (24 bytes overhead).\n");
+    po("   'rate' without 'rep' implies infinite repeat, bounded by -t timeout.\n");
+    po("   'rep' and 'rate' can appear in either order.\n");
+    po("Examples:\n");
+    po("   ef -t 5000 tx eth0 rate 1000 eth dmac ::1 smac ::2\n");
+    po("   ef tx eth0 rep 500 rate 100 eth dmac ::1 smac ::2\n");
+    po("   ef -t 5000 tx eth0 rate 1G eth dmac ::1 smac ::2\n");
+    po("   ef -t 5000 tx eth0 rate 100M eth dmac ::1 smac ::2\n");
+    po("\n");
+    po("Independent TX mode (-i):\n");
+    po("   Multiple TX interfaces send independently. Backpressure (e.g.\n");
+    po("   pause frames) on one socket does not affect others.\n");
+    po("Examples:\n");
+    po("   ef -i -t 5000 tx eth0 rate 100M eth smac ::1 tx eth1 rate 50M eth smac ::2\n");
+    po("   ef -i -t 5000 tx eth0 rate 1000 eth smac ::1 tx eth1 rate 500 eth smac ::2\n");
     po("\n");
 }
 
@@ -236,11 +259,47 @@ int argc_cmd(int argc, const char *argv[], cmd_t *c) {
     }
 
     if (c->type == CMD_TYPE_TX) {
+        int rep_given = 0, kw;
+
         c->repeat = 1;
-        if (strcmp(argv[i], "rep") == 0 || strcmp(argv[i], "repeat") == 0) {
-            c->repeat = atoi(argv[i+1]);
-            i += 2;
+        c->rate_pps = 0;
+        c->rate_bps = 0;
+
+        for (kw = 0; kw < 2 && i < argc; kw++) {
+            if (strcmp(argv[i], "rep") == 0 ||
+                strcmp(argv[i], "repeat") == 0) {
+                if (i + 1 >= argc)
+                    break;
+                c->repeat = atoi(argv[i + 1]);
+                rep_given = 1;
+                i += 2;
+            } else if (strcmp(argv[i], "rate") == 0) {
+                if (i + 1 >= argc)
+                    break;
+
+                const char *val = argv[i + 1];
+                char *end;
+                unsigned long long num = strtoull(val, &end, 10);
+
+                if (end != val && (*end == 'K' || *end == 'k')) {
+                    c->rate_bps = num * 1000ULL;
+                } else if (end != val && (*end == 'M' || *end == 'm')) {
+                    c->rate_bps = num * 1000000ULL;
+                } else if (end != val && (*end == 'G' || *end == 'g')) {
+                    c->rate_bps = num * 1000000000ULL;
+                } else {
+                    c->rate_pps = (uint32_t)num;
+                }
+
+                i += 2;
+            } else {
+                break;
+            }
         }
+
+        // rate without rep implies infinite repeat
+        if ((c->rate_pps > 0 || c->rate_bps > 0) && !rep_given)
+            c->repeat = UINT32_MAX;
     }
 
     //po("%d, i=%d/%d %s\n", __LINE__, i, argc, argv[i]);
@@ -280,6 +339,11 @@ int argc_cmd(int argc, const char *argv[], cmd_t *c) {
 
         if (c->frame->has_mask)
             c->frame_mask_buf = frame_mask_to_buf(c->frame);
+    }
+
+    // Convert wire-rate bps to pps now that frame size is known
+    if (c->rate_bps > 0 && c->frame_buf) {
+        c->rate_pps = rate_bps_to_pps(c->rate_bps, c->frame_buf->size);
     }
 
     i += res;
@@ -422,6 +486,7 @@ err:
     return -1;
 }
 
+int INDEPENDENT_TX = 0;
 int NO_PAD = 0;
 int SIGNAL_READY = 0;
 int TIME_OUT_MS = 100;
@@ -430,11 +495,14 @@ parse_err_ctx_t PARSE_ERR_CTX;
 int main_(int argc, const char *argv[]) {
     int opt;
 
-    while ((opt = getopt(argc, (char * const*)argv, "pvhRt:c:")) != -1) {
+    while ((opt = getopt(argc, (char * const*)argv, "ipvhRt:c:")) != -1) {
         switch (opt) {
+            case 'i':
+                INDEPENDENT_TX = 1;
+                break;
+
             case 'p':
                 NO_PAD = 1;
-                break;
 
             case 'v':
                 print_version();
