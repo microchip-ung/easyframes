@@ -282,14 +282,14 @@ int argc_cmds(int argc, const char *argv[]) {
             break;
 
         } else {
-            return -1;
+            goto err;
 
         }
     }
 
     if (i != argc) {
         po("Parse error! arg# %d out of %d, cmd_idx = %d\n", i, argc, cmd_idx);
-        return -1;
+        goto err;
     }
 
     capture_all_start();
@@ -318,6 +318,13 @@ int argc_cmds(int argc, const char *argv[]) {
     }
 
     return res;
+
+err:
+    for (i = 0; i < cmd_idx; ++i) {
+        cmd_destruct(&cmds[i]);
+    }
+
+    return -1;
 }
 
 int TIME_OUT_MS = 100;
