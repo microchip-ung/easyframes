@@ -415,6 +415,9 @@ static int hdr_copy_to_buf_(hdr_t *hdr, size_t offset, buf_t *buf, int mask) {
 
 
     for (i = 0, f = hdr->fields; i < hdr->fields_size; ++i, ++f) {
+        if (f->bit_width == 0)
+            continue;
+
         if (BIT_TO_BYTE(f->bit_width) + offset > buf->size) {
             //po("Buf over flow\n");
             return -1;
