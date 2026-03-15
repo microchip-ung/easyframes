@@ -96,6 +96,7 @@ add_executable(ef-tests
     test/ef-test.cxx
     test/ef-tests.cxx
     test/test-ef-parse-bytes.cxx
+    test/test-padding.cxx
     test/ifh-ignore.cxx
 )
 
