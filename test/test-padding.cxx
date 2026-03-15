@@ -96,3 +96,88 @@ TEST_CASE("no-pad: large frame unaffected", "[nopad]") {
     bfree(buf);
     frame_free(f);
 }
+
+TEST_CASE("bequal_mask: zero padding accepted", "[bequal][padding]") {
+    buf_t *exp = balloc(14);
+    buf_t *rx  = balloc(60);
+    for (size_t i = 0; i < 14; ++i) {
+        exp->data[i] = (uint8_t)(i + 1);
+        rx->data[i]  = (uint8_t)(i + 1);
+    }
+    // rx->data[14..59] left as 0 by balloc/calloc
+
+    CHECK(bequal_mask(rx, exp, 0, 46) == 1);
+
+    bfree(exp);
+    bfree(rx);
+}
+
+TEST_CASE("bequal_mask: non-zero padding rejected", "[bequal][padding]") {
+    buf_t *exp = balloc(14);
+    buf_t *rx  = balloc(60);
+    for (size_t i = 0; i < 14; ++i) {
+        exp->data[i] = (uint8_t)(i + 1);
+        rx->data[i]  = (uint8_t)(i + 1);
+    }
+    // Corrupt a single byte in the padding region
+    rx->data[59] = 0xAA;
+
+    CHECK(bequal_mask(rx, exp, 0, 46) == 0);
+
+    bfree(exp);
+    bfree(rx);
+}
+
+TEST_CASE("bequal_mask: non-zero padding rejected (all 0xAA)",
+          "[bequal][padding]") {
+    buf_t *exp = balloc(14);
+    buf_t *rx  = balloc(60);
+    for (size_t i = 0; i < 14; ++i) {
+        exp->data[i] = (uint8_t)(i + 1);
+        rx->data[i]  = (uint8_t)(i + 1);
+    }
+    for (size_t i = 14; i < 60; ++i)
+        rx->data[i] = 0xAA;
+
+    CHECK(bequal_mask(rx, exp, 0, 46) == 0);
+
+    bfree(exp);
+    bfree(rx);
+}
+
+TEST_CASE("bequal_mask: masked path, zero padding accepted",
+          "[bequal][padding]") {
+    buf_t *exp  = balloc(14);
+    buf_t *mask = balloc(14);
+    buf_t *rx   = balloc(60);
+    for (size_t i = 0; i < 14; ++i) {
+        exp->data[i]  = (uint8_t)(i + 1);
+        mask->data[i] = 0xff;
+        rx->data[i]   = (uint8_t)(i + 1);
+    }
+
+    CHECK(bequal_mask(rx, exp, mask, 46) == 1);
+
+    bfree(exp);
+    bfree(mask);
+    bfree(rx);
+}
+
+TEST_CASE("bequal_mask: masked path, non-zero padding rejected",
+          "[bequal][padding]") {
+    buf_t *exp  = balloc(14);
+    buf_t *mask = balloc(14);
+    buf_t *rx   = balloc(60);
+    for (size_t i = 0; i < 14; ++i) {
+        exp->data[i]  = (uint8_t)(i + 1);
+        mask->data[i] = 0xff;
+        rx->data[i]   = (uint8_t)(i + 1);
+    }
+    rx->data[30] = 0x01;
+
+    CHECK(bequal_mask(rx, exp, mask, 46) == 0);
+
+    bfree(exp);
+    bfree(mask);
+    bfree(rx);
+}
