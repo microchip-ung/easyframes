@@ -469,7 +469,8 @@ buf_t *frame_to_buf(frame_t *f) {
 
     for (i = f->stack_size - 1; i >= 0; --i)
         if (f->stack[i]->frame_fill_defaults)
-            f->stack[i]->frame_fill_defaults(f, i);
+            if (f->stack[i]->frame_fill_defaults(f, i) < 0)
+                return NULL;
 
     //po("Stack size: %d\n", f->stack_size);
     for (i = 0; i < f->stack_size; ++i) {

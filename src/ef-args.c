@@ -253,6 +253,10 @@ int argc_cmd(int argc, const char *argv[], cmd_t *c) {
 
     if (c->frame) {
         c->frame_buf = frame_to_buf(c->frame);
+        if (!c->frame_buf) {
+            cmd_destruct(c);
+            return -1;
+        }
 
         if (c->frame->has_mask)
             c->frame_mask_buf = frame_mask_to_buf(c->frame);
