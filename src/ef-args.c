@@ -360,7 +360,7 @@ int argc_cmds(int argc, const char *argv[]) {
             break;
 
         } else {
-            return -1;
+            goto err;
 
         }
     }
