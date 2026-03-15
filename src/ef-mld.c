@@ -109,29 +109,29 @@ static int mld_fill_defaults(struct frame *f, int stack_idx) {
 
     if (!found) {
         po("Error: MLD fields must be preceded by an IPv6 header (sip = %p, dip = %p)\n", sip, dip);
-        exit(-1);
+        return -1;
     }
 
     sip = find_field(ip_hdr, "sip");
     if (!sip) {
         po("Internal error: \"sip\" field not found in IPv6 header\n");
-        exit(-1);
+        return -1;
     }
 
     dip = find_field(ip_hdr, "dip");
     if (!dip) {
         po("Internal error: \"dip\" field not found in IPv6 header\n");
-        exit(-1);
+        return -1;
     }
 
     if (!sip->val || !sip->val->data || sip->val->size != 16) {
         po("Error: IPv6 header's SIP is not set or its size is not 16 bytes\n");
-        exit(-1);
+        return -1;
     }
 
     if (!dip->val || !dip->val->data || dip->val->size != 16) {
         po("Error: IPv6 header's DIP is not set or its size is not 16 bytes\n");
-        exit(-1);
+        return -1;
     }
 
     memcpy(pseudo_hdr.sip, sip->val->data, sizeof(pseudo_hdr.sip));
