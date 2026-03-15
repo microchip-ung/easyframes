@@ -1,5 +1,27 @@
 #!/usr/bin/env ruby
 
+require 'open3'
+
+# Verify that invalid input produces the expected error on stderr and a
+# non-zero exit code.  +patterns+ is an array of strings that must all
+# appear in the stderr output (order-independent, substring match).
+def err cmd, *patterns
+    out, err, status = Open3.capture3("./ef #{cmd}")
+
+    if status.success?
+        raise "Command './ef hex #{cmd}' exited with 0, expected non-zero"
+    end
+
+    patterns.each do |pat|
+        unless err.include?(pat)
+            puts "STDERR: #{err}"
+            raise "Expected stderr to contain '#{pat}' for: ./ef hex #{cmd}"
+        end
+    end
+
+    puts "OK (err): #{cmd}"
+end
+
 def ok cmd, expect
     actual = %x[./ef hex #{cmd}]
     actual.chomp!
@@ -286,4 +308,31 @@ ok("coap type 0 code 0.03 msgid 0x736a token 7778 coap-opt num 11 val ascii \"te
 
 #ok("coap-opt num 4",
 #   "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
+
+# Parse error tests, verify helpful error messages on stderr
+# Typo in field name: "vud" is not a field of "ctag"
+err("hex eth smac 0xdead ctag vud 10 pcp 3",
+    "is not a field of 'ctag'",
+    "vud",
+    "valid fields for 'ctag'")
+
+# Unknown header after a valid header
+err("hex eth foo",
+    "is not a field of 'eth' or a recognized header",
+    "foo")
+
+# Completely unknown first token (at command level)
+err("hex bogus eth",
+    "bogus")
+
+# name command: error token is further in (caret must not point at "name")
+err("name f veth smac 0xdead",
+    "is not a recognized header or command",
+    "veth")
+
+# Typo in field name of a second header in the frame
+err("hex eth smac 1 ipv4 sop 1.2.3.4",
+    "is not a field of 'ipv4'",
+    "sop",
+    "valid fields for 'ipv4'")
 
