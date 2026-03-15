@@ -26,11 +26,20 @@ static int sv_fill_defaults(struct frame *f, int stack_idx) {
     if (!found) {
         h->size -= 8; // Bytes
 
-        // Also adjust the bit-widths to 0
+        // Zero the TLV2 bit-widths so no data is written for them
         for (i = 0; i < sizeof(tlv2_fields) / sizeof(tlv2_fields[0]); i++) {
             fld = find_field(h, tlv2_fields[i]);
             fld->bit_width = 0;
         }
+
+        // Shift TLV0 bit_offsets down by 64 (the 8 bytes of TLV2 removed).
+        // Without this, TLV0 fields point past the shrunken header,
+        // causing an assertion failure in hdr_write_field when
+        // frame_mask_to_buf builds the receive mask.
+        fld = find_field(h, "tlv0_type");
+        fld->bit_offset -= 64;
+        fld = find_field(h, "tlv0_len");
+        fld->bit_offset -= 64;
     }
 
     return 0;
