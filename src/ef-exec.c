@@ -347,9 +347,9 @@ int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
                 break;
         }
     } else {
-        // Single-pass mode: one frame per cmd that has tokens.
-        // With -i (independent TX), use MSG_DONTWAIT so backpressure on one
-        // socket cannot stall sends on another.
+        // Batched mode: send up to burst-size frames per cmd using
+        // sendmmsg.  The mmsghdr vector is pre-built by rate_init()
+        // with all entries pointing to the same frame buffer.
         int send_flags = INDEPENDENT_TX ? MSG_DONTWAIT : 0;
 
         for (i = 0; i < res_valid; i++) {
@@ -363,18 +363,23 @@ int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
                 if (cmd_ptr->done)
                     continue;
 
-                if (!rate_can_send(cmd_ptr))
+                int avail = rate_burst_available(cmd_ptr);
+                if (avail <= 0)
                     continue;
 
-                b = cmd_ptr->frame_buf;
-                res = send(resources[i].fd, b->data, b->size, send_flags);
-                if (res < 0)
+                if ((uint32_t)avail > cmd_ptr->repeat)
+                    avail = cmd_ptr->repeat;
+
+                int sent = sendmmsg(resources[i].fd, cmd_ptr->mmsg,
+                                    avail, send_flags);
+                if (sent <= 0)
                     break; // EAGAIN or error — skip resource
 
-                rate_consume(cmd_ptr);
-                cmd_ptr->repeat--;
+                rate_consume_n(cmd_ptr, sent);
+                cmd_ptr->repeat -= sent;
 
-                if ((size_t)res == b->size && cmd_ptr->repeat == 0) {
+                if (cmd_ptr->repeat == 0) {
+                    b = cmd_ptr->frame_buf;
                     po("TX     %16s: ", cmd_ptr->arg0);
                     if (cmd_ptr->name) {
                         po("name %s", cmd_ptr->name);

@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
+#include <sys/socket.h>
 #include <linux/if_packet.h>
 
 #define RATE_BURST 64
@@ -303,6 +304,11 @@ typedef struct cmd {
     int64_t         tb_max;     // max tokens (burst * 1000)
     int64_t         tb_rate;    // millipkts per second
     struct timespec tb_last;    // CLOCK_MONOTONIC last refill
+
+    // Pre-built sendmmsg vector — all entries point to the same frame_buf.
+    // Initialized once by rate_init(); caller varies vlen at send time.
+    struct mmsghdr  mmsg[RATE_BURST];
+    struct iovec    miov[RATE_BURST];
 } cmd_t;
 
 typedef struct {
@@ -318,7 +324,9 @@ int exec_cmds(int cnt, cmd_t *cmds);
 void rate_init(cmd_t *c);
 void rate_refill(cmd_t *c, struct timespec *now);
 int  rate_can_send(cmd_t *c);
+int  rate_burst_available(cmd_t *c);
 void rate_consume(cmd_t *c);
+void rate_consume_n(cmd_t *c, int n);
 int64_t rate_ns_until_token(cmd_t *c);
 uint32_t rate_bps_to_pps(uint64_t bps, size_t frame_len);
 int rate_refill_cmds(int cnt, cmd_t *cmds, struct timeval *tv_left);

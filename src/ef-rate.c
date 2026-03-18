@@ -16,7 +16,7 @@ static int clamp(int v, int lo, int hi)
 
 void rate_init(cmd_t *c)
 {
-    int burst;
+    int i, burst;
 
     // Auto-compute burst: 10% of pps, clamped to [1, RATE_BURST].
     if (c->rate_burst > 0)
@@ -31,6 +31,17 @@ void rate_init(cmd_t *c)
     c->tb_max  = (int64_t)burst * RATE_MILLIPKT;
     c->tb_tokens = c->tb_max;
     clock_gettime(CLOCK_MONOTONIC, &c->tb_last);
+
+    // Pre-fill sendmmsg vector — all entries point to the same frame buffer.
+    // Caller varies vlen at send time.
+    if (c->frame_buf) {
+        for (i = 0; i < burst; i++) {
+            c->miov[i].iov_base = c->frame_buf->data;
+            c->miov[i].iov_len  = c->frame_buf->size;
+            c->mmsg[i].msg_hdr.msg_iov    = &c->miov[i];
+            c->mmsg[i].msg_hdr.msg_iovlen = 1;
+        }
+    }
 }
 
 void rate_refill(cmd_t *c, struct timespec *now)
@@ -70,11 +81,31 @@ int rate_can_send(cmd_t *c)
     return c->tb_tokens >= RATE_MILLIPKT;
 }
 
+int rate_burst_available(cmd_t *c)
+{
+    int avail;
+
+    if (c->rate_pps == 0)
+        return c->rate_burst > 0 ? c->rate_burst : RATE_BURST;
+
+    avail = (int)(c->tb_tokens / RATE_MILLIPKT);
+    if (avail > c->rate_burst)
+        avail = c->rate_burst;
+    return avail;
+}
+
 void rate_consume(cmd_t *c)
 {
     if (c->rate_pps == 0)
         return;
     c->tb_tokens -= RATE_MILLIPKT;
+}
+
+void rate_consume_n(cmd_t *c, int n)
+{
+    if (c->rate_pps == 0)
+        return;
+    c->tb_tokens -= (int64_t)n * RATE_MILLIPKT;
 }
 
 int64_t rate_ns_until_token(cmd_t *c)

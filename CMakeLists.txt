@@ -10,7 +10,7 @@ else()
     project(easyframes C)
 endif()
 
-add_definitions(-Wall)
+add_definitions(-Wall -D_GNU_SOURCE)
 include_directories(src)
 
 
