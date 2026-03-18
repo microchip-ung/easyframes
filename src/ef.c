@@ -477,7 +477,7 @@ buf_t *frame_to_buf(frame_t *f) {
         frame_size += f->stack[i]->size;
     }
 
-    if (frame_size < 60)
+    if (frame_size < 60 && !NO_PAD)
         frame_size = 60;
 
     buf = balloc(frame_size);
@@ -503,7 +503,7 @@ buf_t *frame_mask_to_buf(frame_t *f) {
     }
 
     frame_size_no_padding = frame_size;
-    if (frame_size < 60)
+    if (frame_size < 60 && !NO_PAD)
         frame_size = 60;
 
     buf = balloc(frame_size);
