@@ -3,17 +3,32 @@
 #include <time.h>
 #include <sys/time.h>
 
-#define RATE_BURST       8
 #define RATE_MILLIPKT    1000LL
 #define NSEC_PER_SEC     1000000000LL
 
 /* Ethernet wire overhead: preamble(7) + SFD(1) + FCS(4) + IFG(12) */
 #define ETH_WIRE_OVERHEAD 24
 
+static int clamp(int v, int lo, int hi)
+{
+    return v < lo ? lo : (v > hi ? hi : v);
+}
+
 void rate_init(cmd_t *c)
 {
+    int burst;
+
+    // Auto-compute burst: 10% of pps, clamped to [1, RATE_BURST].
+    if (c->rate_burst > 0)
+        burst = clamp(c->rate_burst, 1, RATE_BURST);
+    else if (c->rate_pps > 0)
+        burst = clamp((int)(c->rate_pps / 10), 1, RATE_BURST);
+    else
+        burst = RATE_BURST;
+
+    c->rate_burst = burst;
     c->tb_rate = (int64_t)c->rate_pps * RATE_MILLIPKT;
-    c->tb_max  = RATE_BURST * RATE_MILLIPKT;
+    c->tb_max  = (int64_t)burst * RATE_MILLIPKT;
     c->tb_tokens = c->tb_max;
     clock_gettime(CLOCK_MONOTONIC, &c->tb_last);
 }

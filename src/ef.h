@@ -7,6 +7,8 @@
 #include <time.h>
 #include <linux/if_packet.h>
 
+#define RATE_BURST 64
+
 #include "version.h"
 
 #ifdef __cplusplus
@@ -296,6 +298,7 @@ typedef struct cmd {
 
     uint32_t        rate_pps;   // 0 = unlimited
     uint64_t        rate_bps;   // 0 = not set; wire-rate bps before conversion
+    int             rate_burst; // 0 = auto (10% of pps, clamped to [1,64])
     int64_t         tb_tokens;  // millipkts (1000 = one packet)
     int64_t         tb_max;     // max tokens (burst * 1000)
     int64_t         tb_rate;    // millipkts per second

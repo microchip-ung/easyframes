@@ -119,7 +119,7 @@ void print_help() {
     po("\n");
     po("Valid commands:\n");
     po("  tx: Transmit a frame on a interface. Syntax:\n");
-    po("  tx <interface> [rep <N>] [rate <pps>] FRAME | help\n");
+    po("  tx <interface> [rep <N>] [rate <pps>] [burst <N>] FRAME | help\n");
     po("\n");
     po("  rx: Specify a frame which is expected to be received. If no \n");
     po("      frame is specified, then the expectation is that no\n");
@@ -182,7 +182,10 @@ void print_help() {
     po("   'rate <N>K|M|G' limits TX to the given wire rate in Kbps/Mbps/Gbps.\n");
     po("   Wire rate includes preamble, SFD, FCS and IFG (24 bytes overhead).\n");
     po("   'rate' without 'rep' implies infinite repeat, bounded by -t timeout.\n");
-    po("   'rep' and 'rate' can appear in either order.\n");
+    po("   'rep', 'rate' and 'burst' can appear in any order.\n");
+    po("   'burst <N>' overrides the token-bucket burst size (default: 10%%\n");
+    po("   of pps, clamped to [1, 64]). Useful at low rates where the\n");
+    po("   default burst of 64 would send an unwanted packet storm.\n");
     po("Examples:\n");
     po("   ef -t 5000 tx eth0 rate 1000 eth dmac ::1 smac ::2\n");
     po("   ef tx eth0 rep 500 rate 100 eth dmac ::1 smac ::2\n");
@@ -264,8 +267,9 @@ int argc_cmd(int argc, const char *argv[], cmd_t *c) {
         c->repeat = 1;
         c->rate_pps = 0;
         c->rate_bps = 0;
+        c->rate_burst = 0;
 
-        for (kw = 0; kw < 2 && i < argc; kw++) {
+        for (kw = 0; kw < 3 && i < argc; kw++) {
             if (strcmp(argv[i], "rep") == 0 ||
                 strcmp(argv[i], "repeat") == 0) {
                 if (i + 1 >= argc)
@@ -291,6 +295,11 @@ int argc_cmd(int argc, const char *argv[], cmd_t *c) {
                     c->rate_pps = (uint32_t)num;
                 }
 
+                i += 2;
+            } else if (strcmp(argv[i], "burst") == 0) {
+                if (i + 1 >= argc)
+                    break;
+                c->rate_burst = atoi(argv[i + 1]);
                 i += 2;
             } else {
                 break;

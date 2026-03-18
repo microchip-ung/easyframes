@@ -14,10 +14,11 @@ static cmd_t make_cmd(uint32_t rate_pps)
 }
 
 TEST_CASE("rate_init sets correct fields", "[rate]") {
-    cmd_t c = make_cmd(1000);
+    cmd_t c = make_cmd(80);
     rate_init(&c);
 
-    CHECK(c.tb_rate == 1000 * 1000LL);       // 1000 pps * 1000 millipkts
+    CHECK(c.rate_burst == 8);                 // clamp(80/10, 1, 64) = 8
+    CHECK(c.tb_rate == 80 * 1000LL);          // 80 pps * 1000 millipkts
     CHECK(c.tb_max  == 8 * 1000LL);           // burst=8 * 1000
     CHECK(c.tb_tokens == c.tb_max);           // starts full
     CHECK(c.tb_last.tv_sec != 0);             // timestamp set
@@ -27,7 +28,7 @@ TEST_CASE("rate_can_send / rate_consume drain burst", "[rate]") {
     cmd_t c = make_cmd(100);
     rate_init(&c);
 
-    // Should be able to send burst=8 packets
+    // burst = clamp(100/10, 1, 64) = 10
     int sent = 0;
     while (rate_can_send(&c)) {
         rate_consume(&c);
@@ -36,7 +37,7 @@ TEST_CASE("rate_can_send / rate_consume drain burst", "[rate]") {
             break; // safety
     }
 
-    CHECK(sent == 8);
+    CHECK(sent == 10);
     CHECK(rate_can_send(&c) == 0);
 }
 
@@ -59,7 +60,7 @@ TEST_CASE("rate_refill adds correct tokens", "[rate]") {
 
     CHECK(c.tb_tokens == 0);
 
-    // Simulate 5ms elapsed (stays under burst cap of 8 pkts)
+    // Simulate 5ms elapsed (stays under burst cap)
     struct timespec now = c.tb_last;
     now.tv_nsec += 5000000; // 5ms
     if (now.tv_nsec >= 1000000000) {
@@ -91,8 +92,11 @@ TEST_CASE("rate_refill partial token accumulation", "[rate]") {
 }
 
 TEST_CASE("rate_refill second boundary crossing", "[rate]") {
-    cmd_t c = make_cmd(1000);
+    cmd_t c = make_cmd(50);
     rate_init(&c);
+
+    // burst = clamp(50/10, 1, 64) = 5
+    CHECK(c.rate_burst == 5);
 
     while (rate_can_send(&c))
         rate_consume(&c);
@@ -108,8 +112,8 @@ TEST_CASE("rate_refill second boundary crossing", "[rate]") {
 
     rate_refill(&c, &now);
 
-    // 1000 pps * 1.5s = 1500 pkts, but capped at burst (8 * 1000 = 8000)
-    CHECK(c.tb_tokens == 8000);
+    // 50 pps * 1.5s = 75 pkts, but capped at burst (5 * 1000 = 5000)
+    CHECK(c.tb_tokens == 5000);
 }
 
 TEST_CASE("rate_refill high rate no overflow", "[rate]") {
