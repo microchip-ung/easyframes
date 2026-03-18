@@ -90,6 +90,8 @@ void print_help() {
     po("Options:\n");
     po("  -v                    Print version.\n");
     po("  -h                    Top level help message.\n");
+    po("  -p                    No pad. Skip padding frames to 60 bytes,\n");
+    po("     allowing runt frames to be sent or matched as-is.\n");
     po("  -t <timeout-in-ms>    When listening on an interface (rx),\n");
     po("     When listening on an interface (rx), the tool will always\n");
     po("     listen during the entire timeout period. This is needed,\n");
@@ -320,13 +322,18 @@ int argc_cmds(int argc, const char *argv[]) {
     return res;
 }
 
+int NO_PAD = 0;
 int TIME_OUT_MS = 100;
 
 int main_(int argc, const char *argv[]) {
     int opt;
 
-    while ((opt = getopt(argc, (char * const*)argv, "vht:c:")) != -1) {
+    while ((opt = getopt(argc, (char * const*)argv, "pvht:c:")) != -1) {
         switch (opt) {
+            case 'p':
+                NO_PAD = 1;
+                break;
+
             case 'v':
                 print_version();
                 return 0;

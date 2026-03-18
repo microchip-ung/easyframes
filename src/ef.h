@@ -16,6 +16,7 @@ extern "C" {
 #define DIV_ROUND(a, b) (1 + ((a - 1) / b))
 #define BIT_TO_BYTE(x) (DIV_ROUND(x, 8))
 
+extern int NO_PAD;
 extern int TIME_OUT_MS;
 
 ///////////////////////////////////////////////////////////////////////////////
