@@ -103,6 +103,8 @@ void print_help() {
     po("     as we must also check that no frames are received during\n");
     po("     the test.  Default is 100ms.\n");
     po("\n");
+    po("  -R                    Print 'EF-READY' to stderr once all\n");
+    po("                        sockets are open and ready for traffic.\n");
     po("  -c <if>,[<snaplen>],[<sync>],[<file>],[cnt]\n");
     po("     Use tcpdump to capture traffic on an interface while the\n");
     po("     test is running. If file is not specified, then it will\n");
@@ -410,13 +412,14 @@ err:
 }
 
 int NO_PAD = 0;
+int SIGNAL_READY = 0;
 int TIME_OUT_MS = 100;
 parse_err_ctx_t PARSE_ERR_CTX;
 
 int main_(int argc, const char *argv[]) {
     int opt;
 
-    while ((opt = getopt(argc, (char * const*)argv, "pvht:c:")) != -1) {
+    while ((opt = getopt(argc, (char * const*)argv, "pvhRt:c:")) != -1) {
         switch (opt) {
             case 'p':
                 NO_PAD = 1;
@@ -429,6 +432,10 @@ int main_(int argc, const char *argv[]) {
             case 'h':
                 print_help();
                 return -1;
+
+            case 'R':
+                SIGNAL_READY = 1;
+                break;
 
             case 't':
                 TIME_OUT_MS = atoi(optarg);

@@ -17,6 +17,7 @@ extern "C" {
 #define BIT_TO_BYTE(x) (DIV_ROUND(x, 8))
 
 extern int NO_PAD;
+extern int SIGNAL_READY;
 extern int TIME_OUT_MS;
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -467,6 +467,9 @@ int exec_cmds(int cnt, cmd_t *cmds) {
             return -1;
     }
 
+    if (SIGNAL_READY)
+        pe("EF-READY\n");
+
     timerclear(&tv_now);
     timerclear(&tv_end);
     timerclear(&tv_left);
