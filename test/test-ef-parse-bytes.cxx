@@ -1,6 +1,8 @@
 #include "ef.h"
 #include "ef-test.h"
 
+#include <arpa/inet.h>
+
 #include "catch_single_include.hxx"
 
 //std::ostream& operator<<(std::ostream& o, const buf_t &b) {
@@ -100,6 +102,31 @@ TEST_CASE("parse_bytes", "[parse_bytes]" ) {
         // 01::20  -> 01:00:00:00:00:20
         // 1::2    -> 01:00:00:00:00:02
         // 1:2::3  -> 01:02:00:00:00:03
+}
+
+TEST_CASE("inet_chksum", "[inet_chksum]") {
+    // Known checksum: bytes from RFC 1071 example
+    // Endian-independent since we're checksumming a fixed byte sequence
+    uint16_t rfc_buf[4];
+    memcpy(rfc_buf, "\x00\x01\xf2\x03\xf4\xf5\xf6\xf7", 8);
+    CHECK(inet_chksum(0, rfc_buf, 8) == 0x220d);
+
+    // Fold-carry regression: the first fold itself overflows 16 bits.
+    // sum=0x1FFFF -> fold = 0x1 + 0xFFFF = 0x10000 (>0xFFFF, needs 2nd fold)
+    // Correct: 0x1 + 0x0 = 0x1, ~0x1 = 0xFFFE
+    // Old bug (single fold): ~0x10000 & 0xFFFF = 0xFFFF
+    uint16_t dummy = 0;
+    CHECK(ntohs(inet_chksum(0x1FFFF, &dummy, 0)) == 0xFFFE);
+
+    // Larger fold-carry: sum=0x3FFFF -> fold = 0x3 + 0xFFFF = 0x10002
+    // Correct: 0x1 + 0x2 = 0x3, ~0x3 = 0xFFFC
+    // Old bug: ~0x10002 & 0xFFFF = 0xFFFD
+    CHECK(ntohs(inet_chksum(0x3FFFF, &dummy, 0)) == 0xFFFC);
+
+    // Non-zero initial sum with buffer data (MLD pseudo-header code path):
+    // pre-accumulated sum + buffer data together trigger the fold carry
+    uint16_t one = 1;
+    CHECK(ntohs(inet_chksum(0x1FFFE, &one, 2)) == 0xFFFE);
 }
 
 TEST_CASE("hdr_write_field", "[hdr_write_field]" ) {
