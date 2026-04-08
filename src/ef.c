@@ -143,8 +143,9 @@ uint16_t inet_chksum(uint32_t sum, const uint16_t *buf, int length) {
         sum += tmp;
     }
 
-    sum = ~((sum >> 16) + (sum & 0xffff));
-    sum &= 0xffff;
+    sum = (sum >> 16) + (sum & 0xffff);
+    sum += (sum >> 16);
+    sum = ~sum & 0xffff;
 
     return htons(sum);
 }
