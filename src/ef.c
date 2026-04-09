@@ -348,8 +348,13 @@ int hdr_parse_fields(frame_t *frame, struct hdr *hdr, int offset,
 
         f = find_field(hdr, argv[i]);
 
-        if (!f)
+        if (!f) {
+            PARSE_ERR_CTX.token = argv[i];
+            PARSE_ERR_CTX.hdr_name = hdr->name;
+            PARSE_ERR_CTX.fields = hdr->fields;
+            PARSE_ERR_CTX.fields_size = hdr->fields_size;
             return i;
+        }
 
         if (field_ignore) {
             field_ignore = 0;

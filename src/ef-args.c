@@ -32,8 +32,13 @@ int argc_frame(int argc, const char *argv[], frame_t *f) {
         }
 
         if (!h) {
-            //po("ERROR: Invalid parameter: %s\n", argv[i]);
-            //return -1;
+            // Only overwrite if hdr_parse_fields didn't already set context
+            if (!PARSE_ERR_CTX.token) {
+                PARSE_ERR_CTX.token = argv[i];
+                PARSE_ERR_CTX.hdr_name = NULL;
+                PARSE_ERR_CTX.fields = NULL;
+                PARSE_ERR_CTX.fields_size = 0;
+            }
             return i;
         }
 
@@ -264,11 +269,82 @@ int argc_cmd(int argc, const char *argv[], cmd_t *c) {
     return i;
 }
 
+static int is_known_hdr(const char *name)
+{
+    int j;
+
+    for (j = 0; j < HDR_TMPL_SIZE; j++)
+        if (hdr_tmpls[j] && hdr_tmpls[j]->name &&
+            strcmp(name, hdr_tmpls[j]->name) == 0)
+            return 1;
+    return 0;
+}
+
+static void print_parse_error(int argc, const char *argv[], int err_idx)
+{
+    int j, col;
+    const char *tok = PARSE_ERR_CTX.token ? PARSE_ERR_CTX.token : argv[err_idx];
+
+    // Find the actual argv position of the error token.  PARSE_ERR_CTX.token
+    // is a pointer into a sub-array of argv, so pointer comparison works.
+    int tok_idx = err_idx;
+    if (PARSE_ERR_CTX.token) {
+        for (j = 0; j < argc; j++) {
+            if (argv[j] == PARSE_ERR_CTX.token) {
+                tok_idx = j;
+                break;
+            }
+        }
+    }
+
+    // Error headline
+    if (PARSE_ERR_CTX.hdr_name && !is_known_hdr(tok)) {
+        pe("error: '%s' is not a field of '%s' or a recognized header\n",
+           tok, PARSE_ERR_CTX.hdr_name);
+    } else if (PARSE_ERR_CTX.hdr_name) {
+        pe("error: '%s' is not a field of '%s'\n",
+           tok, PARSE_ERR_CTX.hdr_name);
+    } else if (PARSE_ERR_CTX.token) {
+        pe("error: '%s' is not a recognized header or command\n", tok);
+    } else {
+        pe("error: unexpected token '%s'\n", tok);
+    }
+
+    // Show the full command with a caret pointing to the bad token
+    pe("  ");
+    for (j = 0; j < argc; j++)
+        pe("%s ", argv[j]);
+    pe("\n");
+
+    // Compute column offset of the error token
+    col = 2; // leading "  "
+    for (j = 0; j < tok_idx; j++)
+        col += strlen(argv[j]) + 1;
+
+    pe("%*s", col, "");
+    for (j = 0; j < (int)strlen(tok); j++)
+        pe("^");
+    pe("\n");
+
+    // Hint: list available fields
+    if (PARSE_ERR_CTX.hdr_name && PARSE_ERR_CTX.fields) {
+        pe("  valid fields for '%s':", PARSE_ERR_CTX.hdr_name);
+        for (j = 0; j < PARSE_ERR_CTX.fields_size; j++) {
+            if (PARSE_ERR_CTX.fields[j].bit_width == 0)
+                continue;
+            pe(" %s", PARSE_ERR_CTX.fields[j].name);
+        }
+        pe("\n");
+    }
+}
+
 int argc_cmds(int argc, const char *argv[]) {
     struct timeval tv_now, tv_left, tv_begin, tv_end;
 
     int res, i = 0, cmd_idx = 0;
     cmd_t cmds[100] = {};
+
+    memset(&PARSE_ERR_CTX, 0, sizeof(PARSE_ERR_CTX));
 
     while (i < argc && cmd_idx < 100) {
         //po("%d, cmd[%d]\n", __LINE__, cmd_idx);
@@ -288,8 +364,8 @@ int argc_cmds(int argc, const char *argv[]) {
     }
 
     if (i != argc) {
-        po("Parse error! arg# %d out of %d, cmd_idx = %d\n", i, argc, cmd_idx);
-        return -1;
+        print_parse_error(argc, argv, i);
+        goto err;
     }
 
     capture_all_start();
@@ -318,9 +394,17 @@ int argc_cmds(int argc, const char *argv[]) {
     }
 
     return res;
+
+err:
+    for (i = 0; i < cmd_idx; ++i) {
+        cmd_destruct(&cmds[i]);
+    }
+
+    return -1;
 }
 
 int TIME_OUT_MS = 100;
+parse_err_ctx_t PARSE_ERR_CTX;
 
 int main_(int argc, const char *argv[]) {
     int opt;
