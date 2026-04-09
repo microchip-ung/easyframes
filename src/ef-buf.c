@@ -68,23 +68,31 @@ int bequal_mask(const buf_t *rx_frame, const buf_t *expected_frame,
     if (rx_frame->size != expected_frame->size + padding)
         return 0;
 
-    if (mask == 0)
-        return memcmp(rx_frame->data, expected_frame->data, rx_frame->size) == 0;
-
-    // Notice, rx_frame->size may be smaller than expected_frame->size
-    for (i = 0; i < rx_frame->size; ++i) {
-        unsigned char a_, b_, m_;
-        a_ = rx_frame->data[i];
-        b_ = expected_frame->data[i];
-        if (i >= mask->size) {
-            m_ = 0xff;
-        } else {
-            m_ = mask->data[i];
-        }
-
-        if ((a_ & m_) != (b_ & m_)) {
+    if (mask == 0) {
+        if (memcmp(rx_frame->data, expected_frame->data,
+                   expected_frame->size) != 0)
             return 0;
+    } else {
+        for (i = 0; i < expected_frame->size; ++i) {
+            unsigned char a_, b_, m_;
+            a_ = rx_frame->data[i];
+            b_ = expected_frame->data[i];
+            if (i >= mask->size) {
+                m_ = 0xff;
+            } else {
+                m_ = mask->data[i];
+            }
+
+            if ((a_ & m_) != (b_ & m_)) {
+                return 0;
+            }
         }
+    }
+
+    // Padding bytes must be zero
+    for (i = expected_frame->size; i < rx_frame->size; ++i) {
+        if (rx_frame->data[i] != 0)
+            return 0;
     }
 
     return 1;

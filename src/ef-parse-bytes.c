@@ -84,6 +84,11 @@ buf_t *parse_bytes_binary(const char *s, int size) {
         return 0;
     }
 
+    if (cnt_bits / 8 > size) {
+        po("ERROR: binary value too large for %d byte field\n", size);
+        return 0;
+    }
+
     b = balloc(size);
 
     p = s;
@@ -150,6 +155,11 @@ buf_t *parse_bytes_hex(const char *s, int size) {
 
     if (has_align_issues) {
         po("ERROR: hex strings must be byte aligned, and if delimiters are then they must also be byte aligned.\n");
+        return 0;
+    }
+
+    if (cnt_nibble / 2 > size) {
+        po("ERROR: hex value too large for %d byte field\n", size);
         return 0;
     }
 

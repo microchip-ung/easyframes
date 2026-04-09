@@ -12,6 +12,11 @@ static int padding_parser(frame_t *f, hdr_t *hdr, int offset,
         return -1;
     }
 
+    if (len > 0xffff) {
+        po("ERROR: padding %u is too large (max 65535)\n", len);
+        return -1;
+    }
+
     f->padding_len = len;
 
     return 1;

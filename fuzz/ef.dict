@@ -1,0 +1,204 @@
+# ef keywords helps libFuzzer discover valid parse paths
+
+# Commands
+"help"
+"hex"
+"ign"
+"ignore"
+"name"
+"pcap"
+"rate"
+"rep"
+"repeat"
+"rx"
+"tx"
+
+# Headers Layer 2
+"ctag"
+"eth"
+"htag"
+"prp"
+"rtag"
+"stag"
+
+# Headers Layer 3/4
+"arp"
+"icmp"
+"igmp"
+"igmpv3_group"
+"ipv4"
+"ipv6"
+"mld"
+"mldv2_group"
+"tcp"
+"udp"
+
+# Headers OAM
+"oam-ccm"
+"oam-laps"
+"oam-lb"
+"oam-lt"
+"oam-raps"
+
+# Headers MRP
+"mrp_lnk"
+"mrp_prop_nack"
+"mrp_topo"
+"mrp_tst"
+
+# Headers PTP
+"ptp-announce"
+"ptp-follow-up"
+"ptp-peer-request"
+"ptp-peer-response"
+"ptp-peer-response-follow-up"
+"ptp-request"
+"ptp-response"
+"ptp-sync"
+"ptp-tlv-org"
+"ptp-tlv-path"
+
+# Headers Industrial / Application
+"coap"
+"coap-opt"
+"coap-parms"
+"opc-ua"
+"profinet-rtc"
+"sv"
+
+# Headers Payload / Padding
+"data"
+"padding"
+
+# Headers IFH (Injection/Extraction Frame Headers)
+"ifh-jr2"
+"ifh-oc1"
+"ifh-sparx5"
+"lp-jr2"
+"lp-oc1"
+"lp-sparx5"
+"sp-jr2"
+"sp-oc1"
+"sp-sparx5"
+
+# Field names Ethernet
+"dmac"
+"smac"
+"et"
+
+# Field names VLAN
+"vid"
+"pcp"
+"dei"
+"seqn"
+"lanid"
+"pathid"
+"recv"
+"suffix"
+"size"
+
+# Field names IPv4
+"ver"
+"ihl"
+"dscp"
+"ecn"
+"id"
+"flags"
+"offset"
+"ttl"
+"proto"
+"chksum"
+"sip"
+"dip"
+
+# Field names IPv6
+"flow"
+"next"
+"hlim"
+
+# Field names TCP/UDP
+"sport"
+"dport"
+"len"
+"seqn"
+"ack"
+"doff"
+"fin"
+"syn"
+"rst"
+"psh"
+"urg"
+"win"
+"urgp"
+
+# Field names ARP
+"htype"
+"ptype"
+"hlen"
+"plen"
+"oper"
+"sha"
+"spa"
+"tha"
+"tpa"
+
+# Field names ICMP
+"type"
+"code"
+"hd"
+
+# Field names IGMP/MLD
+"max_resp"
+"ga"
+"ng"
+"ns"
+"qrv"
+"qqic"
+"rec_type"
+"auxlen"
+
+# Field names PTP
+"hdr-messageType"
+"hdr-versionPTP"
+"hdr-domainNumber"
+"hdr-clockId"
+"hdr-portNumber"
+"hdr-sequenceId"
+"hdr-correctionField"
+"hdr-flagField"
+"hdr-logMessageInterval"
+
+# Field names OAM
+"opcode"
+"mel"
+
+# Parse format keywords
+"ascii"
+"ascii0"
+"pattern"
+"zero"
+"ones"
+"cnt"
+
+# Numeric formats
+"0x"
+"0b"
+"0o"
+"::"
+"0x0800"
+"0x86dd"
+"0x8100"
+"0x88a8"
+"0x88f7"
+"0x8902"
+"0x88e1"
+"ff:ff:ff:ff:ff:ff"
+"01:80:c2:00:00:30"
+"01:19:1b:00:00:00"
+"1.2.3.4"
+"::1"
+"ff02::1"
+"fe80::1"
+"255"
+"1000"
+"0xdeadbeef"

@@ -96,3 +96,42 @@ To learn more, have a look at the help message below.
     $ sudo make install
 
 
+# Fuzzing
+
+Three [libFuzzer](https://llvm.org/docs/LibFuzzer.html) harnesses exercise
+ef's parsing logic with AddressSanitizer enabled:
+
+- **fuzz-parse-bytes**:  feeds random strings to `parse_bytes()` (numeric,
+  hex, IPv4, IPv6, MAC address parsing)
+- **fuzz-argc-frame**: splits input on null bytes into argv and calls
+  `argc_frame()` (all header and field parsers)
+- **fuzz-roundtrip**: property-based test: parses a frame, serializes it,
+  and asserts that the result matches its own receive filter via
+  `bequal_mask()`. Uses the same input format and corpus as fuzz-argc-frame.
+
+Build (requires clang):
+
+    $ cmake -S . -B build-fuzz -DFUZZ_ENABLE=ON -DCMAKE_C_COMPILER=clang
+    $ cmake --build build-fuzz -j$(nproc)
+
+Run (from build-fuzz/):
+
+    $ cd build-fuzz
+    $ mkdir -p corpus-workdir
+    $ ./fuzz-parse-bytes corpus-workdir ../fuzz/corpus-parse-bytes -dict=../fuzz/ef.dict -max_total_time=1200 -jobs=12 -workers=12
+    $ ./fuzz-argc-frame corpus-workdir ../fuzz/corpus-argc-frame -dict=../fuzz/ef.dict -max_total_time=1200 -jobs=12 -workers=12
+    $ ./fuzz-roundtrip corpus-workdir ../fuzz/corpus-argc-frame -dict=../fuzz/ef.dict -max_total_time=1200 -jobs=12 -workers=12
+
+When two corpus directories are given, libFuzzer reads seeds from both
+but writes new discoveries only to the first. This keeps the checked-in
+seed corpus (`fuzz/corpus-*`) clean. The `corpus-workdir` directory is
+gitignored and can be deleted at any time.
+
+The dictionary helps the fuzzer discover valid keywords. Adjust `-jobs`
+and `-workers` to match available cores. Each job writes its own log to
+`fuzz-<N>.log`.
+
+If a crash is found, libFuzzer writes a `crash-<hash>` file that can be
+reproduced with:
+
+    $ ./fuzz-parse-bytes crash-<hash>
