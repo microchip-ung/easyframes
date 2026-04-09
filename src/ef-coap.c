@@ -80,7 +80,7 @@ buf_t *coap_parse_token(hdr_t *hdr, int hdr_offset, const char *s, int bytes) {
 
 int coap_parse_parms(hdr_t *hdr, int hdr_offset, struct field *f, int argc, const char *argv[]){
     int res;
-    buf_t *b, *bb = 0;
+    buf_t *b = 0, *bb = 0;
 
     res = parse_var_bytes(&b, argc, argv);
 
