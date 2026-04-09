@@ -2,6 +2,7 @@
 cmake_minimum_required(VERSION 3.20)
 
 option(TEST_ENABLE "Enable tests" off)
+option(FUZZ_ENABLE "Enable fuzz targets (requires clang with libFuzzer)" off)
 
 if (${TEST_ENABLE})
     project(easyframes)
@@ -102,4 +103,28 @@ target_link_libraries(ef-tests libef)
 include(CTest)
 add_test(ef-tests ./ef-tests)
 add_test(parser-tests.rb ${CMAKE_CURRENT_SOURCE_DIR}/test/parser-tests.rb)
+endif()
+
+if (${FUZZ_ENABLE})
+    # libFuzzer's runtime is C++; clang may not find GCC's libstdc++.
+    # Ask GCC for the path as a fallback.
+    find_library(_STDCXX stdc++)
+    if (NOT _STDCXX)
+        execute_process(
+            COMMAND gcc --print-file-name=libstdc++.so
+            OUTPUT_VARIABLE _STDCXX_PATH OUTPUT_STRIP_TRAILING_WHITESPACE)
+        if (_STDCXX_PATH AND NOT _STDCXX_PATH STREQUAL "libstdc++.so")
+            get_filename_component(_STDCXX_DIR "${_STDCXX_PATH}" DIRECTORY)
+        endif()
+    endif()
+
+    foreach(target fuzz-parse-bytes fuzz-argc-frame fuzz-roundtrip)
+        add_executable(${target} fuzz/${target}.c)
+        target_link_libraries(${target} libef stdc++)
+        target_compile_options(${target} PRIVATE -fsanitize=fuzzer,address)
+        target_link_options(${target} PRIVATE -fsanitize=fuzzer,address)
+        if (_STDCXX_DIR)
+            target_link_directories(${target} PRIVATE ${_STDCXX_DIR})
+        endif()
+    endforeach()
 endif()
