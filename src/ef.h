@@ -131,6 +131,15 @@ int field_copy(field_t *dst, const field_t *src);
 void field_destruct(field_t *f);
 GEN_ALLOC_CLONE_FREE(field);
 
+typedef struct {
+    const char *token;       // token that didn't match
+    const char *hdr_name;    // header being parsed (NULL if at header level)
+    int         fields_size; // number of fields in header
+    field_t    *fields;      // pointer to header's field array
+} parse_err_ctx_t;
+
+extern parse_err_ctx_t PARSE_ERR_CTX;
+
 typedef struct hdr {
     const char *name;
     const char *help;
