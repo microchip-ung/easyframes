@@ -92,13 +92,30 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Run the test build under UBSan with recovery disabled so any undefined
+# behaviour fails CI loudly. -fsanitize=function in particular catches
+# indirect calls through function-pointer types incompatible with the
+# pointee's actual signature (C99/C11 §6.3.2.3); see commit history for
+# the destruct_free regression this guards against. The function check
+# is clang-only, so probe for it.
+include(CheckCCompilerFlag)
+set(EF_SANITIZE_FLAGS -fsanitize=undefined -fno-sanitize-recover=all -fno-omit-frame-pointer)
+check_c_compiler_flag(-fsanitize=function EF_HAVE_FSANITIZE_FUNCTION)
+if (EF_HAVE_FSANITIZE_FUNCTION)
+    list(APPEND EF_SANITIZE_FLAGS -fsanitize=function)
+endif()
+target_compile_options(libef PRIVATE ${EF_SANITIZE_FLAGS})
+target_link_options(libef PUBLIC ${EF_SANITIZE_FLAGS})
+
 add_executable(ef-tests
     test/ef-test.cxx
     test/ef-tests.cxx
     test/test-ef-parse-bytes.cxx
     test/ifh-ignore.cxx
     test/test-padding.cxx
+    test/test-alloc-free.cxx
 )
+target_compile_options(ef-tests PRIVATE ${EF_SANITIZE_FLAGS})
 
 target_link_libraries(ef-tests libef)
 include(CTest)
