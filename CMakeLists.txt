@@ -122,6 +122,7 @@ add_executable(ef-tests
     test/ifh-ignore.cxx
     test/test-padding.cxx
     test/test-alloc-free.cxx
+    test/test-mld-zero-width.cxx
 )
 target_compile_options(ef-tests PRIVATE ${EF_SANITIZE_FLAGS})
 

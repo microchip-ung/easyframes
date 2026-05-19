@@ -280,6 +280,8 @@ buf_t *frame_def(hdr_t *hdr) {
         field_t *f = &hdr->fields[i];
         if (!f->def)
             continue;
+        if (f->bit_width == 0)
+            continue;
 
         hdr_write_field(b, 0, f, f->def);
     }
