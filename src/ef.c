@@ -28,18 +28,6 @@ void print_hex_str(int fd, void *_d, int s) {
     }
 }
 
-typedef void (*destruct_cb_t)(void *buf);
-
-void destruct_free(void *buf, void *cb_) {
-    destruct_cb_t cb = (destruct_cb_t)cb_;
-    if (!buf)
-        return;
-
-    cb(buf);
-    free(buf);
-}
-
-
 void field_destruct(field_t *f) {
     if (!f)
         return;
