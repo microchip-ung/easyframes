@@ -4,6 +4,12 @@ cmake_minimum_required(VERSION 3.20)
 option(TEST_ENABLE "Enable tests" off)
 option(FUZZ_ENABLE "Enable fuzz targets (requires clang with libFuzzer)" off)
 
+# libpcap is optional. Disabling it drops pcap-format input/output (the
+# `pcap` command and pcap capture) but keeps everything else. Useful when
+# linking under sanitizers that flag uninitialized reads in transitive
+# dependencies of libpcap (e.g. libnl-route-3 DSO init under MSan).
+option(EF_USE_LIBPCAP "Detect and link libpcap if available" ON)
+
 if (${TEST_ENABLE})
     project(easyframes)
 else()
@@ -15,20 +21,22 @@ include_directories(src)
 
 
 set(_LIBPCAP "")
-find_package(PkgConfig)
-pkg_check_modules(PCAP libpcap)
-if (PCAP_FOUND)
-    add_definitions(-DHAS_LIBPCAP)
-    include_directories(${PCAP_INCLUDE_DIRS})
-    set(_LIBPCAP ${PCAP_LIBRARIES})
-else()
-    FIND_PATH(PCAP_INCLUDE_DIR NAMES pcap/pcap.h)
-    FIND_LIBRARY(PCAP_LIBRARY NAMES pcap)
-
-    if (PCAP_LIBRARY)
+if (EF_USE_LIBPCAP)
+    find_package(PkgConfig)
+    pkg_check_modules(PCAP libpcap)
+    if (PCAP_FOUND)
         add_definitions(-DHAS_LIBPCAP)
-        include_directories(${PCAP_INCLUDE_DIR})
-        set(_LIBPCAP ${PCAP_LIBRARY})
+        include_directories(${PCAP_INCLUDE_DIRS})
+        set(_LIBPCAP ${PCAP_LIBRARIES})
+    else()
+        FIND_PATH(PCAP_INCLUDE_DIR NAMES pcap/pcap.h)
+        FIND_LIBRARY(PCAP_LIBRARY NAMES pcap)
+
+        if (PCAP_LIBRARY)
+            add_definitions(-DHAS_LIBPCAP)
+            include_directories(${PCAP_INCLUDE_DIR})
+            set(_LIBPCAP ${PCAP_LIBRARY})
+        endif()
     endif()
 endif()
 
