@@ -1,8 +1,10 @@
+#define _GNU_SOURCE
 #include "ef.h"
 
 #include <stdio.h>
 #include <unistd.h>
 #include <errno.h>
+#include <poll.h>
 #include <net/if.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
@@ -120,55 +122,46 @@ int add_cmd_to_resource(cmd_t *c, int res_max, int res_valid,
     return 1;
 }
 
-int rfds_wfds_fill(cmd_socket_t *resources, int res_valid, fd_set *rfds,
-                   fd_set *wfds, int has_rate) {
+// Returns the number of pfd entries with a non-zero events mask, or
+// -1 if no resource has anything to wait for.
+int pfds_fill(cmd_socket_t *resources, int res_valid, struct pollfd *pfds,
+              int has_rate) {
     cmd_t *cmd_ptr;
-    int i, fd_set_cnt, fd_max;
-
-    fd_max = 0;
-    fd_set_cnt = 0;
-
-    FD_ZERO(rfds);
-    FD_ZERO(wfds);
+    int i, active = 0;
 
     for (i = 0; i < res_valid; i++) {
+        short events = 0;
+
         resources[i].has_rx = 0;
         resources[i].has_tx = 0;
 
         cmd_ptr = resources[i].cmd;
         while (cmd_ptr) {
-            // We must listen even if done, as we need to confirm that no other
-            // frames are receiwed
             if (cmd_ptr->type == CMD_TYPE_RX)
                 resources[i].has_rx = 1;
-
-            // Only TX is not done
             if (cmd_ptr->type == CMD_TYPE_TX && cmd_ptr->done == 0)
                 resources[i].has_tx = resources[i].has_tx || !has_rate || rate_can_send(cmd_ptr);
-
             cmd_ptr = cmd_ptr->next;
         }
 
-        if (resources[i].has_rx) {
-            FD_SET(resources[i].fd, rfds);
-            fd_max = MAX(resources[i].fd, fd_max);
-            fd_set_cnt++;
-        }
+        if (resources[i].has_rx)
+            events |= POLLIN;
+        if (resources[i].has_tx)
+            events |= POLLOUT;
 
-        if (resources[i].has_tx) {
-            FD_SET(resources[i].fd, wfds);
-            fd_max = MAX(resources[i].fd, fd_max);
-            fd_set_cnt++;
-        }
+        pfds[i].fd = resources[i].fd;
+        pfds[i].events = events;
+        pfds[i].revents = 0;
+
+        if (events)
+            active++;
     }
 
-    if (fd_set_cnt)
-        return fd_max;
-
-    return -1;
+    return active ? active : -1;
 }
 
-int send_ready_wfds(cmd_socket_t *resources, int res_valid, fd_set *wfds) {
+int send_ready_pfds(cmd_socket_t *resources, int res_valid,
+                    struct pollfd *pfds) {
     int i, res, tx_done;
     cmd_t *cmd_ptr;
     buf_t *b;
@@ -176,7 +169,7 @@ int send_ready_wfds(cmd_socket_t *resources, int res_valid, fd_set *wfds) {
     while (1) {
         tx_done = 1;
         for (i = 0; i < res_valid; i++) {
-            if (!FD_ISSET(resources[i].fd, wfds))
+            if (!(pfds[i].revents & POLLOUT))
                 continue;
 
             // TX the first not "done" frame.
@@ -216,13 +209,15 @@ int send_ready_wfds(cmd_socket_t *resources, int res_valid, fd_set *wfds) {
 }
 
 
-int send_rate_ready_wfds(cmd_socket_t *resources, int res_valid, fd_set *wfds) {
+int send_rate_ready_pfds(cmd_socket_t *resources, int res_valid,
+                         struct pollfd *pfds) {
     int i, res;
     cmd_t *cmd_ptr;
     buf_t *b;
 
+
     for (i = 0; i < res_valid; i++) {
-        if (!FD_ISSET(resources[i].fd, wfds))
+        if (!(pfds[i].revents & POLLOUT))
             continue;
 
         for (cmd_ptr = resources[i].cmd; cmd_ptr; cmd_ptr = cmd_ptr->next) {
@@ -269,9 +264,9 @@ int send_rate_ready_wfds(cmd_socket_t *resources, int res_valid, fd_set *wfds) {
     return 0;
 }
 
-int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
-                      fd_set *wfds, int has_rate) {
-    int i, res, match, old_size, tx_done;
+int pfds_process(cmd_socket_t *resources, int res_valid, struct pollfd *pfds,
+                 int has_rate) {
+    int i, res, match, old_size;
     buf_t *b;
     cmd_t *cmd_ptr;
 
@@ -282,7 +277,7 @@ int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
         struct iovec iov = {};
         struct msghdr msg = {};
 
-        if (!FD_ISSET(resources[i].fd, rfds))
+        if (!(pfds[i].revents & POLLIN))
             continue;
 
         // read the frame, and try to match it
@@ -377,9 +372,9 @@ int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
     }
 
     if (!has_rate)
-        return send_ready_wfds(resources, res_valid, wfds);
+        return send_ready_pfds(resources, res_valid, pfds);
     else
-        return send_rate_ready_wfds(resources, res_valid, wfds);
+        return send_rate_ready_pfds(resources, res_valid, pfds);
 }
 
 static int copy_cmd_by_name(const char *name, int cnt, cmd_t *cmds, cmd_t *dst) {
@@ -441,27 +436,58 @@ int pcap_append(cmd_t *c) {
 }
 #endif
 
-// Returns 0 if we are out of time (tv_left ~0) and 1 otherwise.
-static int update_timeleft(struct timeval *tv_now, struct timeval *tv_end,
-                           struct timeval *tv_left, int tx_pending)
+// Returns 1 if we are past ts_end, 0 otherwise. On return ts_left is
+// ts_end - ts_now, or zero if past.
+static int update_timeleft(struct timespec *ts_now, struct timespec *ts_end,
+                           struct timespec *ts_left)
 {
-    gettimeofday(tv_now, 0);
-    if (timercmp(tv_now, tv_end, >)) {
-        if (!tx_pending)
-            return 1;
-        *tv_end = *tv_now;
+    clock_gettime(CLOCK_MONOTONIC, ts_now);
+    if (ts_less(ts_end, ts_now)) {
+        ts_clear(ts_left);
+        return 1;
     }
-    timersub(tv_end, tv_now, tv_left);
+    ts_sub(ts_end, ts_now, ts_left);
+    return 0;
+}
+
+// Sleep until the shorter of ts_pace and ts_left elapses, using
+// CLOCK_MONOTONIC + TIMER_ABSTIME so we don't drift across iterations.
+static void wait_for_tokens(const struct timespec *ts_pace,
+                            const struct timespec *ts_left) {
+    const struct timespec *ts = ts_pace;
+    struct timespec ts_dl;
+
+    if (ts_isset(ts_left) && ts_less(ts_left, ts))
+        ts = ts_left;
+
+    clock_gettime(CLOCK_MONOTONIC, &ts_dl);
+    ts_add(&ts_dl, ts, &ts_dl);
+    clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &ts_dl, NULL);
+}
+
+// True if any TX cmd still owes an explicit-rep contract.
+static int explicit_rep_pending(int cnt, const cmd_t *cmds)
+{
+    int i;
+    for (i = 0; i < cnt; i++) {
+        if (cmds[i].type != CMD_TYPE_TX)
+            continue;
+        if (cmds[i].done)
+            continue;
+        if (!cmds[i].rep_explicit)
+            continue;
+        return 1;
+    }
     return 0;
 }
 
 int exec_cmds(int cnt, cmd_t *cmds) {
-    struct timeval tv_now, tv_left, tv_begin, tv_end;
-    int i, res, fd_max, err = 0;
+    struct timespec ts_now, ts_left, ts_begin, ts_end;
+    int i, res, npfds, err = 0;
     int res_valid = 0;
     int has_rate = 0;
     cmd_socket_t resources[100] = {};
-    fd_set rfds, wfds;
+    struct pollfd pfds[100];
     cmd_t *cmd_ptr;
 
     // Print inventory of named frames
@@ -563,49 +589,67 @@ int exec_cmds(int cnt, cmd_t *cmds) {
         }
     }
 
-    timerclear(&tv_now);
-    timerclear(&tv_end);
-    timerclear(&tv_left);
-    timerclear(&tv_begin);
+    ts_clear(&ts_now);
+    ts_clear(&ts_end);
+    ts_clear(&ts_left);
+    ts_clear(&ts_begin);
 
-    tv_left.tv_sec = TIME_OUT_MS / 1000;
-    tv_left.tv_usec = (TIME_OUT_MS - (tv_left.tv_sec * 1000)) * 1000;
+    ts_left.tv_sec  = TIME_OUT_MS / 1000;
+    ts_left.tv_nsec = (long)(TIME_OUT_MS % 1000) * 1000000L;
 
-    gettimeofday(&tv_begin, 0);
-    timeradd(&tv_begin, &tv_left, &tv_end);
+    clock_gettime(CLOCK_MONOTONIC, &ts_begin);
+    ts_add(&ts_begin, &ts_left, &ts_end);
     int tx_pending = 0;
     while (1) {
+        struct timespec ts_pace;
+        ts_clear(&ts_pace);
+
         if (has_rate) {
-            tx_pending = rate_refill_cmds(cnt, cmds, &tv_left);
+            tx_pending = rate_refill_cmds(cnt, cmds, &ts_pace);
             if (!tx_pending)
-                    has_rate = 0; // fall back to non-ratelimited logic
+                has_rate = 0; // fall back to non-ratelimited logic
         }
 
-        fd_max = rfds_wfds_fill(resources, res_valid, &rfds, &wfds, has_rate);
-        if (fd_max < 0) {
+        npfds = pfds_fill(resources, res_valid, pfds, has_rate);
+        if (npfds < 0) {
             if (!tx_pending)
                 break;
-
-            // No fds ready but is TX pending, so sleep to wait for tokens and
-            // repoll the fds
-            res = select(0, NULL, NULL, NULL, &tv_left);
-            update_timeleft(&tv_now, &tv_end, &tv_left, 1);
+            wait_for_tokens(&ts_pace, &ts_left);
+            if (update_timeleft(&ts_now, &ts_end, &ts_left)) {
+                // -t is a hard cap unless we still owe explicit-rep frames.
+                if (!explicit_rep_pending(cnt, cmds))
+                    break;
+            }
             continue;
         }
 
-        res = select(fd_max + 1, &rfds, &wfds, 0, &tv_left);
-        if (update_timeleft(&tv_now, &tv_end, &tv_left, tx_pending))
-            break;
+        struct timespec ts_to;
+        if (ts_isset(&ts_pace)) {
+            ts_to = ts_pace;
+            if (ts_isset(&ts_left) && ts_less(&ts_left, &ts_to))
+                ts_to = ts_left;
+        } else if (ts_isset(&ts_left)) {
+            ts_to = ts_left;
+        } else {
+            ts_to.tv_sec  = 0;
+            ts_to.tv_nsec = 250000;
+        }
+
+        res = ppoll(pfds, res_valid, &ts_to, NULL);
+        if (update_timeleft(&ts_now, &ts_end, &ts_left)) {
+            if (!explicit_rep_pending(cnt, cmds))
+                break;
+        }
 
         if (res == 0) {
-            if (tx_pending)
-                continue; // no ready fds, hit pacing timeout so go again
+            if (tx_pending || explicit_rep_pending(cnt, cmds))
+                continue;
             break;
         } else if (res < 0) {
             break;
         }
 
-        rfds_wfds_process(resources, res_valid, &rfds, &wfds, has_rate);
+        pfds_process(resources, res_valid, pfds, has_rate);
     }
 
     // close resources

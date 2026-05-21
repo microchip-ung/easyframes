@@ -99,7 +99,7 @@ uint32_t rate_bps_to_pps(uint64_t bps, size_t frame_len)
     return pps > 0 ? (uint32_t)pps : 1;
 }
 
-int rate_refill_cmds(int cnt, cmd_t *cmds, struct timeval *tv_left)
+int rate_refill_cmds(int cnt, cmd_t *cmds, struct timespec *ts_pace)
 {
         int64_t min_wait_ns = -1;
         struct timespec ts_now;
@@ -107,7 +107,6 @@ int rate_refill_cmds(int cnt, cmd_t *cmds, struct timeval *tv_left)
 
         clock_gettime(CLOCK_MONOTONIC, &ts_now);
 
-        // Refill all rate-limited buckets and compute min wait
         for (int i = 0; i < cnt; i++) {
                 if (cmds[i].type != CMD_TYPE_TX || cmds[i].done)
                         continue;
@@ -124,16 +123,9 @@ int rate_refill_cmds(int cnt, cmd_t *cmds, struct timeval *tv_left)
                 }
         }
 
-        // Set select timeout to pacing interval when waiting for tokens
         if (min_wait_ns > 0) {
-                struct timeval tv_pace;
-                tv_pace.tv_sec = min_wait_ns / 1000000000LL;
-                tv_pace.tv_usec = (min_wait_ns % 1000000000LL) / 1000;
-                // Use the shorter of pacing and remaining timeout.
-                // After timeout expires tv_left is ~0, so always use
-                // the pacing interval to avoid a busy-loop.
-                if (!timerisset(tv_left) || timercmp(&tv_pace, tv_left, <))
-                        *tv_left = tv_pace;
+                ts_pace->tv_sec  = min_wait_ns / NSEC_PER_SEC;
+                ts_pace->tv_nsec = min_wait_ns % NSEC_PER_SEC;
         }
 
         return tx_pending;

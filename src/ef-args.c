@@ -97,11 +97,15 @@ void print_help() {
     po("  -h                    Top level help message.\n");
     po("  -p                    No pad. Skip padding frames to 60 bytes,\n");
     po("     allowing runt frames to be sent or matched as-is.\n");
-    po("  -t <timeout-in-ms>    When listening on an interface (rx),\n");
-    po("     When listening on an interface (rx), the tool will always\n");
-    po("     listen during the entire timeout period. This is needed,\n");
-    po("     as we must also check that no frames are received during\n");
-    po("     the test.  Default is 100ms.\n");
+    po("  -t <timeout-in-ms>    Wall-clock deadline. Default 100ms.\n");
+    po("     RX: the tool always listens for the full timeout period\n");
+    po("     so we can verify that no unexpected frames arrive.\n");
+    po("     TX:\n");
+    po("       'rep N' (with or without 'rate'): runs to completion,\n");
+    po("         ignoring -t. Explicit rep is the user contract.\n");
+    po("       'rate ...' with no rep: stops at -t.\n");
+    po("       no rep, no rate: a single frame is sent and the loop\n");
+    po("         exits as soon as RX (if any) is satisfied.\n");
     po("\n");
     po("  -c <if>,[<snaplen>],[<sync>],[<file>],[cnt]\n");
     po("     Use tcpdump to capture traffic on an interface while the\n");
@@ -285,6 +289,7 @@ int argc_cmd(int argc, const char *argv[], cmd_t *c) {
         // rate without rep implies infinite repeat
         if ((c->rate_pps > 0 || c->rate_bps > 0) && !rep_given)
             c->repeat = UINT32_MAX;
+        c->rep_explicit = rep_given;
     }
 
     //po("%d, i=%d/%d %s\n", __LINE__, i, argc, argv[i]);
