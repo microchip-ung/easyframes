@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <unistd.h>
+#include <errno.h>
 #include <net/if.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
@@ -120,7 +121,7 @@ int add_cmd_to_resource(cmd_t *c, int res_max, int res_valid,
 }
 
 int rfds_wfds_fill(cmd_socket_t *resources, int res_valid, fd_set *rfds,
-                   fd_set *wfds) {
+                   fd_set *wfds, int has_rate) {
     cmd_t *cmd_ptr;
     int i, fd_set_cnt, fd_max;
 
@@ -143,7 +144,7 @@ int rfds_wfds_fill(cmd_socket_t *resources, int res_valid, fd_set *rfds,
 
             // Only TX is not done
             if (cmd_ptr->type == CMD_TYPE_TX && cmd_ptr->done == 0)
-                resources[i].has_tx = 1;
+                resources[i].has_tx = resources[i].has_tx || !has_rate || rate_can_send(cmd_ptr);
 
             cmd_ptr = cmd_ptr->next;
         }
@@ -214,8 +215,62 @@ int send_ready_wfds(cmd_socket_t *resources, int res_valid, fd_set *wfds) {
     return 0;
 }
 
+
+int send_rate_ready_wfds(cmd_socket_t *resources, int res_valid, fd_set *wfds) {
+    int i, res;
+    cmd_t *cmd_ptr;
+    buf_t *b;
+
+    for (i = 0; i < res_valid; i++) {
+        if (!FD_ISSET(resources[i].fd, wfds))
+            continue;
+
+        for (cmd_ptr = resources[i].cmd; cmd_ptr; cmd_ptr = cmd_ptr->next) {
+            if (cmd_ptr->type != CMD_TYPE_TX)
+                continue;
+
+            if (cmd_ptr->done)
+                continue;
+
+            if (!rate_can_send(cmd_ptr))
+                continue;
+
+            b = cmd_ptr->frame_buf;
+            res = send(resources[i].fd, b->data, b->size, 0);
+            if (res < 0) {
+                if (errno == EAGAIN || errno == EWOULDBLOCK ||
+                    errno == EINTR  || errno == ENOBUFS)
+                    break;
+                pe("TX-ERR %16s: send: %m\n", cmd_ptr->arg0);
+                cmd_ptr->done = 1;
+                resources[i].tx_err_cnt++;
+                break;
+            }
+            if ((size_t)res != b->size)
+                break;
+
+            rate_consume(cmd_ptr);
+            cmd_ptr->repeat--;
+
+            if (cmd_ptr->repeat == 0) {
+                po("TX     %16s: ", cmd_ptr->arg0);
+                if (cmd_ptr->name) {
+                    po("name %s", cmd_ptr->name);
+                } else {
+                    print_hex_str(1, b->data, b->size);
+                }
+                po("\n");
+                cmd_ptr->done = 1;
+            }
+            break;
+        }
+    }
+
+    return 0;
+}
+
 int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
-                      fd_set *wfds) {
+                      fd_set *wfds, int has_rate) {
     int i, res, match, old_size, tx_done;
     buf_t *b;
     cmd_t *cmd_ptr;
@@ -321,9 +376,10 @@ int rfds_wfds_process(cmd_socket_t *resources, int res_valid, fd_set *rfds,
         bfree(b);
     }
 
-    send_ready_wfds(resources, res_valid, wfds);
-
-    return 0;
+    if (!has_rate)
+        return send_ready_wfds(resources, res_valid, wfds);
+    else
+        return send_rate_ready_wfds(resources, res_valid, wfds);
 }
 
 static int copy_cmd_by_name(const char *name, int cnt, cmd_t *cmds, cmd_t *dst) {
@@ -385,10 +441,25 @@ int pcap_append(cmd_t *c) {
 }
 #endif
 
+// Returns 0 if we are out of time (tv_left ~0) and 1 otherwise.
+static int update_timeleft(struct timeval *tv_now, struct timeval *tv_end,
+                           struct timeval *tv_left, int tx_pending)
+{
+    gettimeofday(tv_now, 0);
+    if (timercmp(tv_now, tv_end, >)) {
+        if (!tx_pending)
+            return 1;
+        *tv_end = *tv_now;
+    }
+    timersub(tv_end, tv_now, tv_left);
+    return 0;
+}
+
 int exec_cmds(int cnt, cmd_t *cmds) {
     struct timeval tv_now, tv_left, tv_begin, tv_end;
     int i, res, fd_max, err = 0;
     int res_valid = 0;
+    int has_rate = 0;
     cmd_socket_t resources[100] = {};
     fd_set rfds, wfds;
     cmd_t *cmd_ptr;
@@ -431,6 +502,13 @@ int exec_cmds(int cnt, cmd_t *cmds) {
 
     if (err)
         return err;
+
+    // Convert wire-rate bps to pps now that frame_buf is resolved.
+    for (i = 0; i < cnt; i++) {
+        if (cmds[i].rate_bps > 0 && cmds[i].frame_buf)
+            cmds[i].rate_pps = rate_bps_to_pps(cmds[i].rate_bps,
+                                               cmds[i].frame_buf->size);
+    }
 
 #ifdef HAS_LIBPCAP
     for (i = 0; i < cnt; i++) {
@@ -477,6 +555,14 @@ int exec_cmds(int cnt, cmd_t *cmds) {
             return -1;
     }
 
+    // Scan for rate-limited TX cmds and initialize their token buckets
+    for (i = 0; i < cnt; i++) {
+        if (cmds[i].type == CMD_TYPE_TX && cmds[i].rate_pps > 0) {
+            has_rate = 1;
+            rate_init(&cmds[i]);
+        }
+    }
+
     timerclear(&tv_now);
     timerclear(&tv_end);
     timerclear(&tv_left);
@@ -487,26 +573,39 @@ int exec_cmds(int cnt, cmd_t *cmds) {
 
     gettimeofday(&tv_begin, 0);
     timeradd(&tv_begin, &tv_left, &tv_end);
+    int tx_pending = 0;
     while (1) {
-        fd_max = rfds_wfds_fill(resources, res_valid, &rfds, &wfds);
+        if (has_rate) {
+            tx_pending = rate_refill_cmds(cnt, cmds, &tv_left);
+            if (!tx_pending)
+                    has_rate = 0; // fall back to non-ratelimited logic
+        }
+
+        fd_max = rfds_wfds_fill(resources, res_valid, &rfds, &wfds, has_rate);
         if (fd_max < 0) {
-            break;
+            if (!tx_pending)
+                break;
+
+            // No fds ready but is TX pending, so sleep to wait for tokens and
+            // repoll the fds
+            res = select(0, NULL, NULL, NULL, &tv_left);
+            update_timeleft(&tv_now, &tv_end, &tv_left, 1);
+            continue;
         }
 
         res = select(fd_max + 1, &rfds, &wfds, 0, &tv_left);
-        gettimeofday(&tv_now, 0);
-        if (timercmp(&tv_now, &tv_end, >)) {
+        if (update_timeleft(&tv_now, &tv_end, &tv_left, tx_pending))
             break;
-        }
-        timersub(&tv_end, &tv_now, &tv_left);
 
         if (res == 0) {
+            if (tx_pending)
+                continue; // no ready fds, hit pacing timeout so go again
             break;
         } else if (res < 0) {
             break;
         }
 
-        rfds_wfds_process(resources, res_valid, &rfds, &wfds);
+        rfds_wfds_process(resources, res_valid, &rfds, &wfds, has_rate);
     }
 
     // close resources
@@ -520,6 +619,7 @@ int exec_cmds(int cnt, cmd_t *cmds) {
     // check results
     for (i = 0; i < res_valid; i++) {
         err += resources[i].rx_err_cnt;
+        err += resources[i].tx_err_cnt;
 
         for (cmd_ptr = resources[i].cmd; cmd_ptr; cmd_ptr = cmd_ptr->next) {
             if (cmd_ptr->type != CMD_TYPE_RX)
