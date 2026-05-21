@@ -81,6 +81,7 @@ add_library(libef STATIC
     src/ef-payload.c
     src/ef-profinet.c
     src/ef-ptp.c
+    src/ef-rate.c
     src/ef-sv.c
     src/ef-udp.c
     src/ef-vlan.c
@@ -123,6 +124,7 @@ add_executable(ef-tests
     test/test-padding.cxx
     test/test-alloc-free.cxx
     test/test-mld-zero-width.cxx
+    test/test-rate-limit.cxx
 )
 target_compile_options(ef-tests PRIVATE ${EF_SANITIZE_FLAGS})
 

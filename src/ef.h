@@ -7,6 +7,8 @@
 #include <time.h>
 #include <linux/if_packet.h>
 
+#define RATE_BURST 1024
+
 #include "version.h"
 
 #ifdef __cplusplus
@@ -291,6 +293,14 @@ typedef struct cmd {
     buf_t      *frame_mask_buf;
     int         done;
     uint32_t    repeat;
+
+    uint32_t        rate_pps;   // 0 = unlimited
+    uint64_t        rate_bps;   // 0 = not set; wire-rate bps before conversion
+    int             rate_burst; // 0 = auto (10% of pps, clamped to [1,64])
+    int64_t         tb_tokens;  // millipkts (1000 = one packet)
+    int64_t         tb_max;     // max tokens (burst * 1000)
+    int64_t         tb_rate;    // millipkts per second
+    struct timespec tb_last;    // CLOCK_MONOTONIC last refill
 } cmd_t;
 
 typedef struct {
@@ -299,9 +309,18 @@ typedef struct {
     int          has_tx;
     cmd_t       *cmd;
     int          rx_err_cnt;
+    int          tx_err_cnt;
 } cmd_socket_t;
 
 int exec_cmds(int cnt, cmd_t *cmds);
+
+void rate_init(cmd_t *c);
+void rate_refill(cmd_t *c, struct timespec *now);
+int  rate_can_send(cmd_t *c);
+void rate_consume(cmd_t *c);
+int64_t rate_ns_until_token(cmd_t *c);
+uint32_t rate_bps_to_pps(uint64_t bps, size_t frame_len);
+int rate_refill_cmds(int cnt, cmd_t *cmds, struct timeval *tv_left);
 
 void print_hex_str(int fd, void *_d, int s);
 
