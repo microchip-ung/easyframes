@@ -83,6 +83,7 @@ add_library(libef STATIC
     src/ef-ptp.c
     src/ef-rate.c
     src/ef-sv.c
+    src/ef-txring.c
     src/ef-udp.c
     src/ef-vlan.c
     ${version_file}

@@ -77,6 +77,29 @@ void rate_consume(cmd_t *c)
     c->tb_tokens -= RATE_MILLIPKT;
 }
 
+// Spend N tokens at once. Used by the TX_RING path which submits a
+// burst per kick rather than one frame at a time.
+void rate_consume_n(cmd_t *c, int n)
+{
+    if (c->rate_pps == 0 || n <= 0)
+        return;
+    c->tb_tokens -= (int64_t)n * RATE_MILLIPKT;
+}
+
+// Whole tokens currently available, clamped to the configured burst.
+int rate_burst_available(cmd_t *c)
+{
+    int64_t pkts;
+    if (c->rate_pps == 0)
+        return c->rate_burst > 0 ? c->rate_burst : RATE_BURST;
+    pkts = c->tb_tokens / RATE_MILLIPKT;
+    if (pkts < 0)
+        pkts = 0;
+    if (c->rate_burst > 0 && pkts > c->rate_burst)
+        pkts = c->rate_burst;
+    return (int)pkts;
+}
+
 int64_t rate_ns_until_token(cmd_t *c)
 {
     int64_t deficit;

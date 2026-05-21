@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <getopt.h>
 
 int argc_frame(int argc, const char *argv[], frame_t *f) {
     int i, j, res, offset;
@@ -97,6 +98,10 @@ void print_help() {
     po("  -h                    Top level help message.\n");
     po("  -p                    No pad. Skip padding frames to 60 bytes,\n");
     po("     allowing runt frames to be sent or matched as-is.\n");
+    po("  -r                    Use PACKET_TX_RING (TPACKET_V2) for TX.\n");
+    po("     Per-cmd mmap ring; one atomic store per frame plus a periodic\n");
+    po("     send() kick. Off by default; the env var EF_TX_RING=1 has the\n");
+    po("     same effect as -r.\n");
     po("  -t <timeout-in-ms>    Wall-clock deadline. Default 100ms.\n");
     po("     RX: the tool always listens for the full timeout period\n");
     po("     so we can verify that no unexpected frames arrive.\n");
@@ -473,13 +478,18 @@ err:
 
 int NO_PAD = 0;
 int TIME_OUT_MS = 100;
+int TX_RING = 0;
 parse_err_ctx_t PARSE_ERR_CTX;
 
 int main_(int argc, const char *argv[]) {
     int opt;
 
-    while ((opt = getopt(argc, (char * const*)argv, "pvht:c:")) != -1) {
+    while ((opt = getopt(argc, (char * const*)argv, "pvhrt:c:")) != -1) {
         switch (opt) {
+            case 'r':
+                TX_RING = 1;
+                break;
+
             case 'p':
                 NO_PAD = 1;
                 break;
