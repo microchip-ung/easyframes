@@ -104,6 +104,9 @@ void print_help() {
     po("     Per-cmd mmap ring; one atomic store per frame plus a periodic\n");
     po("     send() kick. Off by default; the env var EF_TX_RING=1 has the\n");
     po("     same effect as -r.\n");
+    po("  --ignore-link-down    On the PACKET_TX_RING path (-r), retry\n");
+    po("     silently when send() returns ENETDOWN instead of treating it\n");
+    po("     as fatal. Useful for tests that toggle the link mid-run.\n");
     po("  -t <timeout-in-ms>    Wall-clock deadline. Default 100ms.\n");
     po("     RX: the tool always listens for the full timeout period\n");
     po("     so we can verify that no unexpected frames arrive.\n");
@@ -482,13 +485,23 @@ int NO_PAD = 0;
 int TIME_OUT_MS = 100;
 int QDISC_BYPASS = 0;
 int TX_RING = 0;
+int IGNORE_LINK_DOWN = 0;
 parse_err_ctx_t PARSE_ERR_CTX;
 
 int main_(int argc, const char *argv[]) {
+    static const struct option long_opts[] = {
+        { "ignore-link-down", no_argument, NULL, 1 },
+        { NULL,               0,           NULL, 0 },
+    };
     int opt;
 
-    while ((opt = getopt(argc, (char * const*)argv, "pQvhrt:c:")) != -1) {
+    while ((opt = getopt_long(argc, (char * const*)argv, "pQvhrt:c:",
+                              long_opts, NULL)) != -1) {
         switch (opt) {
+            case 1:  // --ignore-link-down
+                IGNORE_LINK_DOWN = 1;
+                break;
+
             case 'Q':
                 QDISC_BYPASS = 1;
                 break;

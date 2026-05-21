@@ -177,7 +177,8 @@ int txring_send(cmd_t *c, int fd, int budget) {
     if (filled > 0) {
         int n = send(fd, NULL, 0, MSG_DONTWAIT);
         if (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK &&
-            errno != EINTR && errno != ENOBUFS) {
+            errno != EINTR && errno != ENOBUFS &&
+            !(IGNORE_LINK_DOWN && errno == ENETDOWN)) {
             pe("TX-ERR %16s: send (txring): %m\n", c->arg0);
             return -1;
         }
