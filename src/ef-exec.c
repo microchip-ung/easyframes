@@ -239,6 +239,53 @@ int send_rate_ready_pfds(cmd_socket_t *resources, int res_valid,
             if (!rate_can_send(cmd_ptr))
                 continue;
 
+            if (MMSG_TX && cmd_ptr->mmsg) {
+                // Batch up to rate_burst_available (or full burst when
+                // rate is unlimited) into a single sendmmsg syscall.
+                int avail = rate_burst_available(cmd_ptr);
+                int sent;
+
+                if (avail <= 0)
+                    continue;
+                if ((uint32_t)avail > cmd_ptr->repeat)
+                    avail = cmd_ptr->repeat;
+
+                // MSG_DONTWAIT: sendmmsg returns the number of fully-sent
+                // messages (0..avail). -1 + EAGAIN/EWOULDBLOCK means none
+                // could be sent without blocking; we'll come back next
+                // ppoll wake. Same non-blocking property as the txring
+                // kick.
+                sent = sendmmsg(resources[i].fd, cmd_ptr->mmsg, avail,
+                                MSG_DONTWAIT);
+                if (sent < 0) {
+                    if (errno == EAGAIN || errno == EWOULDBLOCK ||
+                        errno == EINTR  || errno == ENOBUFS)
+                        break;
+                    pe("TX-ERR %16s: sendmmsg: %m\n", cmd_ptr->arg0);
+                    cmd_ptr->done = 1;
+                    resources[i].tx_err_cnt++;
+                    break;
+                }
+                if (sent == 0)
+                    break;
+
+                rate_consume_n(cmd_ptr, sent);
+                cmd_ptr->repeat -= sent;
+
+                if (cmd_ptr->repeat == 0) {
+                    b = cmd_ptr->frame_buf;
+                    po("TX     %16s: ", cmd_ptr->arg0);
+                    if (cmd_ptr->name) {
+                        po("name %s", cmd_ptr->name);
+                    } else {
+                        print_hex_str(1, b->data, b->size);
+                    }
+                    po("\n");
+                    cmd_ptr->done = 1;
+                }
+                break;
+            }
+
             b = cmd_ptr->frame_buf;
             res = send(resources[i].fd, b->data, b->size, 0);
             if (res < 0) {
@@ -662,9 +709,21 @@ int exec_cmds(int cnt, cmd_t *cmds) {
             return -1;
     }
 
-    // Scan for rate-limited TX cmds and initialize their token buckets
+    // EF_USE_SENDMMSG=1 enables the sendmmsg batched TX path, same as
+    // -m. Must be evaluated before rate_init so the mmsg/miov vectors
+    // get allocated for rate-limited cmds.
+    if (!MMSG_TX) {
+        const char *env = getenv("EF_USE_SENDMMSG");
+        if (env && *env && strcmp(env, "0") != 0)
+            MMSG_TX = 1;
+    }
+
+    // Initialize the rate path for any TX cmd that has explicit rate, or
+    // any TX cmd at all when -m is set.
     for (i = 0; i < cnt; i++) {
-        if (cmds[i].type == CMD_TYPE_TX && cmds[i].rate_pps > 0) {
+        if (cmds[i].type != CMD_TYPE_TX)
+            continue;
+        if (cmds[i].rate_pps > 0 || MMSG_TX) {
             has_rate = 1;
             rate_init(&cmds[i]);
         }

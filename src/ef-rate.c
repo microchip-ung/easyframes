@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include "ef.h"
 
 #include <time.h>
@@ -16,7 +17,7 @@ static int clamp(int v, int lo, int hi)
 
 void rate_init(cmd_t *c)
 {
-    int burst;
+    int i, burst;
 
     // Auto-compute burst: 10% of pps, clamped to [1, RATE_BURST].
     if (c->rate_burst > 0)
@@ -31,6 +32,26 @@ void rate_init(cmd_t *c)
     c->tb_max  = (int64_t)burst * RATE_MILLIPKT;
     c->tb_tokens = c->tb_max;
     clock_gettime(CLOCK_MONOTONIC, &c->tb_last);
+
+    // Pre-build the sendmmsg vector when -m is set. All entries point to
+    // the same frame buffer; the caller varies vlen at send time. Skipped
+    // when -m is off so plain rate-limited cmds pay no extra memory.
+    if (MMSG_TX && c->frame_buf) {
+        c->mmsg = calloc(burst, sizeof(*c->mmsg));
+        c->miov = calloc(burst, sizeof(*c->miov));
+        if (!c->mmsg || !c->miov) {
+            pe("rate_init: out of memory (burst=%d)\n", burst);
+            free(c->mmsg); c->mmsg = NULL;
+            free(c->miov); c->miov = NULL;
+            return;
+        }
+        for (i = 0; i < burst; i++) {
+            c->miov[i].iov_base = c->frame_buf->data;
+            c->miov[i].iov_len  = c->frame_buf->size;
+            c->mmsg[i].msg_hdr.msg_iov    = &c->miov[i];
+            c->mmsg[i].msg_hdr.msg_iovlen = 1;
+        }
+    }
 }
 
 void rate_refill(cmd_t *c, struct timespec *now)

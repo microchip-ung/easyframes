@@ -80,6 +80,11 @@ void cmd_destruct(cmd_t *c) {
     if (c->frame_mask_buf)
         bfree(c->frame_mask_buf);
 
+    if (c->mmsg)
+        free(c->mmsg);
+    if (c->miov)
+        free(c->miov);
+
     memset(c, 0, sizeof(*c));
 }
 
@@ -104,6 +109,11 @@ void print_help() {
     po("     Per-cmd mmap ring; one atomic store per frame plus a periodic\n");
     po("     send() kick. Off by default; the env var EF_TX_RING=1 has the\n");
     po("     same effect as -r.\n");
+    po("  -m                    Batch TX with sendmmsg in the rate path.\n");
+    po("     Sends up to 'burst' frames per syscall using a pre-built\n");
+    po("     mmsghdr vector. Requires a 'rate ...' on the tx command\n");
+    po("     (use 'rate <high>G' as a near-unlimited rate to opt in).\n");
+    po("     Same effect via env: EF_USE_SENDMMSG=1.\n");
     po("  --ignore-link-down    On the PACKET_TX_RING path (-r), retry\n");
     po("     silently when send() returns ENETDOWN instead of treating it\n");
     po("     as fatal. Useful for tests that toggle the link mid-run.\n");
@@ -485,6 +495,7 @@ int NO_PAD = 0;
 int TIME_OUT_MS = 100;
 int QDISC_BYPASS = 0;
 int TX_RING = 0;
+int MMSG_TX = 0;
 int IGNORE_LINK_DOWN = 0;
 parse_err_ctx_t PARSE_ERR_CTX;
 
@@ -495,7 +506,7 @@ int main_(int argc, const char *argv[]) {
     };
     int opt;
 
-    while ((opt = getopt_long(argc, (char * const*)argv, "pQvhrt:c:",
+    while ((opt = getopt_long(argc, (char * const*)argv, "pQvhrmt:c:",
                               long_opts, NULL)) != -1) {
         switch (opt) {
             case 1:  // --ignore-link-down
@@ -509,6 +520,10 @@ int main_(int argc, const char *argv[]) {
 
             case 'r':
                 TX_RING = 1;
+                break;
+
+            case 'm':
+                MMSG_TX = 1;
                 break;
 
             case 'p':
