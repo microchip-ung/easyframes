@@ -18,6 +18,43 @@ extern "C" {
 #define DIV_ROUND(a, b) (1 + ((a - 1) / b))
 #define BIT_TO_BYTE(x) (DIV_ROUND(x, 8))
 
+#define NSEC_PER_SEC 1000000000LL
+
+static inline void ts_clear(struct timespec *a) {
+    a->tv_sec = 0;
+    a->tv_nsec = 0;
+}
+
+static inline int ts_isset(const struct timespec *a) {
+    return a->tv_sec != 0 || a->tv_nsec != 0;
+}
+
+static inline int ts_less(const struct timespec *a, const struct timespec *b) {
+    if (a->tv_sec != b->tv_sec)
+        return a->tv_sec < b->tv_sec;
+    return a->tv_nsec < b->tv_nsec;
+}
+
+static inline void ts_add(const struct timespec *a, const struct timespec *b,
+                          struct timespec *out) {
+    out->tv_sec  = a->tv_sec + b->tv_sec;
+    out->tv_nsec = a->tv_nsec + b->tv_nsec;
+    if (out->tv_nsec >= NSEC_PER_SEC) {
+        out->tv_sec  += 1;
+        out->tv_nsec -= NSEC_PER_SEC;
+    }
+}
+
+static inline void ts_sub(const struct timespec *a, const struct timespec *b,
+                          struct timespec *out) {
+    out->tv_sec  = a->tv_sec - b->tv_sec;
+    out->tv_nsec = a->tv_nsec - b->tv_nsec;
+    if (out->tv_nsec < 0) {
+        out->tv_sec  -= 1;
+        out->tv_nsec += NSEC_PER_SEC;
+    }
+}
+
 extern int NO_PAD;
 extern int TIME_OUT_MS;
 
@@ -292,6 +329,7 @@ typedef struct cmd {
     buf_t      *frame_buf;
     buf_t      *frame_mask_buf;
     int         done;
+    int         rep_explicit; // user passed 'rep N' (rate-without-rep is 0)
     uint32_t    repeat;
 
     uint32_t        rate_pps;   // 0 = unlimited
@@ -320,7 +358,7 @@ int  rate_can_send(cmd_t *c);
 void rate_consume(cmd_t *c);
 int64_t rate_ns_until_token(cmd_t *c);
 uint32_t rate_bps_to_pps(uint64_t bps, size_t frame_len);
-int rate_refill_cmds(int cnt, cmd_t *cmds, struct timeval *tv_left);
+int rate_refill_cmds(int cnt, cmd_t *cmds, struct timespec *ts_pace);
 
 void print_hex_str(int fd, void *_d, int s);
 
