@@ -264,6 +264,77 @@ int send_rate_ready_pfds(cmd_socket_t *resources, int res_valid,
     return 0;
 }
 
+int send_txring_ready_pfds(cmd_socket_t *resources, int res_valid,
+                           struct pollfd *pfds) {
+    cmd_t *cmd_ptr;
+    buf_t *b;
+    int    i;
+
+    for (i = 0; i < res_valid; i++) {
+        if (!(pfds[i].revents & POLLOUT))
+            continue;
+
+        for (cmd_ptr = resources[i].cmd; cmd_ptr; cmd_ptr = cmd_ptr->next) {
+            int    submitted;
+            int    budget;
+            size_t in_flight;
+
+            if (cmd_ptr->type != CMD_TYPE_TX)
+                continue;
+            if (cmd_ptr->done)
+                continue;
+            if (!cmd_ptr->txring_map)
+                continue;
+
+            // Budget uses unsigned math so rate-without-rep
+            // (repeat = UINT32_MAX) does not wrap to -1.
+            if (cmd_ptr->repeat > 0) {
+                if (cmd_ptr->rate_pps > 0)
+                    budget = rate_burst_available(cmd_ptr);
+                else
+                    budget = (int)cmd_ptr->txring_frame_nr;
+                if (budget > 0) {
+                    if ((uint32_t)budget > cmd_ptr->repeat)
+                        budget = (int)cmd_ptr->repeat;
+                    submitted = txring_send(cmd_ptr, resources[i].fd, budget);
+                    if (submitted < 0) {
+                        cmd_ptr->done = 1;
+                        resources[i].tx_err_cnt++;
+                        break;
+                    }
+                    if (submitted > 0) {
+                        if (cmd_ptr->rate_pps > 0)
+                            rate_consume_n(cmd_ptr, submitted);
+                        cmd_ptr->repeat -= (uint32_t)submitted;
+                    }
+                }
+            }
+
+            // Done only when the kernel has drained every slot we ever
+            // flipped, not just when repeat hits zero. Kick periodically
+            // while waiting; ppoll wakes us when something drains.
+            in_flight = txring_unsent(cmd_ptr);
+            if (cmd_ptr->repeat == 0) {
+                if (in_flight == 0) {
+                    b = cmd_ptr->frame_buf;
+                    po("TX     %16s: ", cmd_ptr->arg0);
+                    if (cmd_ptr->name)
+                        po("name %s", cmd_ptr->name);
+                    else
+                        print_hex_str(1, b->data, b->size);
+                    po("\n");
+                    cmd_ptr->done = 1;
+                } else {
+                    txring_kick(resources[i].fd);
+                }
+            }
+            break;
+        }
+    }
+
+    return 0;
+}
+
 int pfds_process(cmd_socket_t *resources, int res_valid, struct pollfd *pfds,
                  int has_rate) {
     int i, res, match, old_size;
@@ -371,10 +442,11 @@ int pfds_process(cmd_socket_t *resources, int res_valid, struct pollfd *pfds,
         bfree(b);
     }
 
-    if (!has_rate)
-        return send_ready_pfds(resources, res_valid, pfds);
-    else
+    if (TX_RING)
+        return send_txring_ready_pfds(resources, res_valid, pfds);
+    if (has_rate)
         return send_rate_ready_pfds(resources, res_valid, pfds);
+    return send_ready_pfds(resources, res_valid, pfds);
 }
 
 static int copy_cmd_by_name(const char *name, int cnt, cmd_t *cmds, cmd_t *dst) {
@@ -589,6 +661,26 @@ int exec_cmds(int cnt, cmd_t *cmds) {
         }
     }
 
+    // EF_TX_RING=1 enables PACKET_TX_RING, same as -r. Off by default;
+    // there is no auto-pick based on rep count.
+    if (!TX_RING) {
+        const char *env = getenv("EF_TX_RING");
+        if (env && *env && strcmp(env, "0") != 0)
+            TX_RING = 1;
+    }
+
+    if (TX_RING) {
+        for (i = 0; i < res_valid; i++) {
+            cmd_t *cp;
+            for (cp = resources[i].cmd; cp; cp = cp->next) {
+                if (cp->type != CMD_TYPE_TX)
+                    continue;
+                if (txring_init(cp, resources[i].fd) < 0)
+                    return -1;
+            }
+        }
+    }
+
     ts_clear(&ts_now);
     ts_clear(&ts_end);
     ts_clear(&ts_left);
@@ -652,7 +744,16 @@ int exec_cmds(int cnt, cmd_t *cmds) {
         pfds_process(resources, res_valid, pfds, has_rate);
     }
 
-    // close resources
+    // close resources. munmap any TX rings before closing the socket
+    // since the mapping is owned by the socket lifetime.
+    if (TX_RING) {
+        for (i = 0; i < res_valid; i++) {
+            cmd_t *cp;
+            for (cp = resources[i].cmd; cp; cp = cp->next)
+                if (cp->type == CMD_TYPE_TX)
+                    txring_close(cp);
+        }
+    }
     for (i = 0; i < res_valid; i++) {
         if (resources[i].fd >= 0) {
             close(resources[i].fd);

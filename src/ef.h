@@ -57,6 +57,7 @@ static inline void ts_sub(const struct timespec *a, const struct timespec *b,
 
 extern int NO_PAD;
 extern int TIME_OUT_MS;
+extern int TX_RING;            // -r enables PACKET_TX_RING for all TX cmds
 
 ///////////////////////////////////////////////////////////////////////////////
 typedef struct {
@@ -339,6 +340,13 @@ typedef struct cmd {
     int64_t         tb_max;     // max tokens (burst * 1000)
     int64_t         tb_rate;    // millipkts per second
     struct timespec tb_last;    // CLOCK_MONOTONIC last refill
+
+    void   *txring_map;        // mmap'd PACKET_TX_RING base, NULL if unused
+    size_t  txring_map_len;
+    size_t  txring_frame_size; // bytes per slot
+    size_t  txring_frame_nr;   // total slots (always power of 2)
+    size_t  txring_mask;       // frame_nr - 1
+    size_t  txring_head;       // producer index
 } cmd_t;
 
 typedef struct {
@@ -356,9 +364,17 @@ void rate_init(cmd_t *c);
 void rate_refill(cmd_t *c, struct timespec *now);
 int  rate_can_send(cmd_t *c);
 void rate_consume(cmd_t *c);
+void rate_consume_n(cmd_t *c, int n);
+int  rate_burst_available(cmd_t *c);
 int64_t rate_ns_until_token(cmd_t *c);
 uint32_t rate_bps_to_pps(uint64_t bps, size_t frame_len);
 int rate_refill_cmds(int cnt, cmd_t *cmds, struct timespec *ts_pace);
+
+int    txring_init(cmd_t *c, int fd);
+int    txring_send(cmd_t *c, int fd, int budget);
+size_t txring_unsent(const cmd_t *c);
+void   txring_kick(int fd);
+void   txring_close(cmd_t *c);
 
 void print_hex_str(int fd, void *_d, int s);
 
