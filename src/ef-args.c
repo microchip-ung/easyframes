@@ -98,6 +98,8 @@ void print_help() {
     po("  -h                    Top level help message.\n");
     po("  -p                    No pad. Skip padding frames to 60 bytes,\n");
     po("     allowing runt frames to be sent or matched as-is.\n");
+    po("  -Q                    Set PACKET_QDISC_BYPASS on all sockets.\n");
+    po("     Skips the Linux qdisc layer entirely, reducing TX CPU cost.\n");
     po("  -r                    Use PACKET_TX_RING (TPACKET_V2) for TX.\n");
     po("     Per-cmd mmap ring; one atomic store per frame plus a periodic\n");
     po("     send() kick. Off by default; the env var EF_TX_RING=1 has the\n");
@@ -478,14 +480,20 @@ err:
 
 int NO_PAD = 0;
 int TIME_OUT_MS = 100;
+int QDISC_BYPASS = 0;
 int TX_RING = 0;
 parse_err_ctx_t PARSE_ERR_CTX;
 
 int main_(int argc, const char *argv[]) {
     int opt;
 
-    while ((opt = getopt(argc, (char * const*)argv, "pvhrt:c:")) != -1) {
+    while ((opt = getopt(argc, (char * const*)argv, "pQvhrt:c:")) != -1) {
         switch (opt) {
+            case 'Q':
+                QDISC_BYPASS = 1;
+                break;
+
+
             case 'r':
                 TX_RING = 1;
                 break;

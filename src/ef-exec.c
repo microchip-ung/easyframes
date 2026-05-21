@@ -66,6 +66,15 @@ int raw_socket(const char *name) {
         return -1;
     }
 
+    if (QDISC_BYPASS) {
+        val = 1;
+        if (setsockopt(s, SOL_PACKET, PACKET_QDISC_BYPASS,
+                       &val, sizeof(val)) < 0) {
+            po("%s:%d PACKET_QDISC_BYPASS not supported on %s: %m\n",
+               __FILE__, __LINE__, name);
+        }
+    }
+
     // Make sure that the socket is empty before started.
     //
     // Warning: I have no idea why this is needed, but otherwise I see that the
