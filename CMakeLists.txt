@@ -4,6 +4,12 @@ cmake_minimum_required(VERSION 3.20)
 option(TEST_ENABLE "Enable tests" off)
 option(FUZZ_ENABLE "Enable fuzz targets (requires clang with libFuzzer)" off)
 
+# libpcap is optional. Disabling it drops pcap-format input/output (the
+# `pcap` command and pcap capture) but keeps everything else. Useful when
+# linking under sanitizers that flag uninitialized reads in transitive
+# dependencies of libpcap (e.g. libnl-route-3 DSO init under MSan).
+option(EF_USE_LIBPCAP "Detect and link libpcap if available" ON)
+
 if (${TEST_ENABLE})
     project(easyframes)
 else()
@@ -15,20 +21,22 @@ include_directories(src)
 
 
 set(_LIBPCAP "")
-find_package(PkgConfig)
-pkg_check_modules(PCAP libpcap)
-if (PCAP_FOUND)
-    add_definitions(-DHAS_LIBPCAP)
-    include_directories(${PCAP_INCLUDE_DIRS})
-    set(_LIBPCAP ${PCAP_LIBRARIES})
-else()
-    FIND_PATH(PCAP_INCLUDE_DIR NAMES pcap/pcap.h)
-    FIND_LIBRARY(PCAP_LIBRARY NAMES pcap)
-
-    if (PCAP_LIBRARY)
+if (EF_USE_LIBPCAP)
+    find_package(PkgConfig)
+    pkg_check_modules(PCAP libpcap)
+    if (PCAP_FOUND)
         add_definitions(-DHAS_LIBPCAP)
-        include_directories(${PCAP_INCLUDE_DIR})
-        set(_LIBPCAP ${PCAP_LIBRARY})
+        include_directories(${PCAP_INCLUDE_DIRS})
+        set(_LIBPCAP ${PCAP_LIBRARIES})
+    else()
+        FIND_PATH(PCAP_INCLUDE_DIR NAMES pcap/pcap.h)
+        FIND_LIBRARY(PCAP_LIBRARY NAMES pcap)
+
+        if (PCAP_LIBRARY)
+            add_definitions(-DHAS_LIBPCAP)
+            include_directories(${PCAP_INCLUDE_DIR})
+            set(_LIBPCAP ${PCAP_LIBRARY})
+        endif()
     endif()
 endif()
 
@@ -92,13 +100,31 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Run the test build under UBSan with recovery disabled so any undefined
+# behaviour fails CI loudly. -fsanitize=function in particular catches
+# indirect calls through function-pointer types incompatible with the
+# pointee's actual signature (C99/C11 §6.3.2.3); see commit history for
+# the destruct_free regression this guards against. The function check
+# is clang-only, so probe for it.
+include(CheckCCompilerFlag)
+set(EF_SANITIZE_FLAGS -fsanitize=undefined -fno-sanitize-recover=all -fno-omit-frame-pointer)
+check_c_compiler_flag(-fsanitize=function EF_HAVE_FSANITIZE_FUNCTION)
+if (EF_HAVE_FSANITIZE_FUNCTION)
+    list(APPEND EF_SANITIZE_FLAGS -fsanitize=function)
+endif()
+target_compile_options(libef PRIVATE ${EF_SANITIZE_FLAGS})
+target_link_options(libef PUBLIC ${EF_SANITIZE_FLAGS})
+
 add_executable(ef-tests
     test/ef-test.cxx
     test/ef-tests.cxx
     test/test-ef-parse-bytes.cxx
     test/ifh-ignore.cxx
     test/test-padding.cxx
+    test/test-alloc-free.cxx
+    test/test-mld-zero-width.cxx
 )
+target_compile_options(ef-tests PRIVATE ${EF_SANITIZE_FLAGS})
 
 target_link_libraries(ef-tests libef)
 include(CTest)

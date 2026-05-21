@@ -77,11 +77,12 @@ size_t bwrite_all(int fd, const buf_list_t *buf);
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void destruct_free(void *buf, void *cb);
-
 #define GEN_ALLOC_CLONE_FREE(name)                                             \
 static inline void name ## _free(name ## _t *f) {                              \
-    destruct_free(f, (void *)&name ## _destruct);                              \
+    if (!f)                                                                    \
+        return;                                                                \
+    name ## _destruct(f);                                                      \
+    free(f);                                                                   \
 }                                                                              \
 static inline name ## _t *name ## _alloc() {                                   \
     return (name ## _t *)calloc(1, sizeof(name ## _t));                        \

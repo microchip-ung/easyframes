@@ -28,18 +28,6 @@ void print_hex_str(int fd, void *_d, int s) {
     }
 }
 
-typedef void (*destruct_cb_t)(void *buf);
-
-void destruct_free(void *buf, void *cb_) {
-    destruct_cb_t cb = (destruct_cb_t)cb_;
-    if (!buf)
-        return;
-
-    cb(buf);
-    free(buf);
-}
-
-
 void field_destruct(field_t *f) {
     if (!f)
         return;
@@ -291,6 +279,8 @@ buf_t *frame_def(hdr_t *hdr) {
     for (i = 0; i < hdr->fields_size; ++i) {
         field_t *f = &hdr->fields[i];
         if (!f->def)
+            continue;
+        if (f->bit_width == 0)
             continue;
 
         hdr_write_field(b, 0, f, f->def);
