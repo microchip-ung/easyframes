@@ -59,6 +59,7 @@ extern int NO_PAD;
 extern int TIME_OUT_MS;
 extern int QDISC_BYPASS;
 extern int TX_RING;            // -r enables PACKET_TX_RING for all TX cmds
+extern int IGNORE_LINK_DOWN;   // --ignore-link-down: retry on ENETDOWN (txring)
 
 ///////////////////////////////////////////////////////////////////////////////
 typedef struct {
