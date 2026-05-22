@@ -21,4 +21,11 @@ void   xdp_close(struct cmd *c);
 
 int    xdp_socket_fd(const struct cmd *c);
 
+// Attach / detach an XDP_PASS program on ifname without binding a
+// socket. Used to amortize the driver channel reset cost (~1s on
+// mlx5 25G) across many subsequent ef -x runs. The program stays
+// loaded after ef exits: the kernel holds a reference once attached.
+int    xdp_install_iface(const char *ifname);
+int    xdp_uninstall_iface(const char *ifname);
+
 #endif // EF_XDP_H

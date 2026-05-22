@@ -1,4 +1,5 @@
 #include "ef.h"
+#include "ef-xdp.h"
 
 #include <sys/time.h>
 #include <stdlib.h>
@@ -114,6 +115,11 @@ void print_help() {
     po("     and binds an xsk socket in XDP_ZEROCOPY mode. Fails hard if\n");
     po("     the driver does not support ZC, so the run is never silently\n");
     po("     demoted. Mutually exclusive with -r.\n");
+    po("  --xdp-install <if>    Attach an XDP_PASS program to <if> and\n");
+    po("     exit. The mlx5 channel reset that backs an XDP attach takes\n");
+    po("     ~1s; pre-attaching amortizes that across many -x runs since\n");
+    po("     -x reuses an already-attached program.\n");
+    po("  --xdp-uninstall <if>  Detach XDP from <if> and exit.\n");
     po("  -m                    Batch TX with sendmmsg in the rate path.\n");
     po("     Sends up to 'burst' frames per syscall using a pre-built\n");
     po("     mmsghdr vector. Requires a 'rate ...' on the tx command\n");
@@ -507,8 +513,10 @@ parse_err_ctx_t PARSE_ERR_CTX;
 
 int main_(int argc, const char *argv[]) {
     static const struct option long_opts[] = {
-        { "ignore-link-down", no_argument, NULL, 1 },
-        { NULL,               0,           NULL, 0 },
+        { "ignore-link-down", no_argument,       NULL, 1 },
+        { "xdp-install",      required_argument, NULL, 2 },
+        { "xdp-uninstall",    required_argument, NULL, 3 },
+        { NULL,               0,                 NULL, 0 },
     };
     int opt;
 
@@ -518,6 +526,12 @@ int main_(int argc, const char *argv[]) {
             case 1:  // --ignore-link-down
                 IGNORE_LINK_DOWN = 1;
                 break;
+
+            case 2:  // --xdp-install
+                return xdp_install_iface(optarg);
+
+            case 3:  // --xdp-uninstall
+                return xdp_uninstall_iface(optarg);
 
             case 'Q':
                 QDISC_BYPASS = 1;

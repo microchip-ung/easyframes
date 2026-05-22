@@ -616,6 +616,39 @@ int xdp_socket_fd(const cmd_t *c) {
     return c->xdp ? c->xdp->fd : -1;
 }
 
+int xdp_install_iface(const char *ifname) {
+    int ifindex = if_nametoindex(ifname);
+    int prog_fd;
+    int rc;
+
+    if (ifindex == 0) {
+        pe("xdp-install: if_nametoindex(%s): %m\n", ifname);
+        return -1;
+    }
+    if (iface_has_xdp(ifindex)) {
+        pe("xdp-install: %s already has an XDP program attached\n", ifname);
+        return 0;  // idempotent: nothing to do
+    }
+    prog_fd = load_xdp_pass();
+    if (prog_fd < 0)
+        return -1;
+    rc = netlink_xdp_set(ifindex, prog_fd, XDP_FLAGS_DRV_MODE);
+    // The kernel takes a reference on the program at attach time, so
+    // we can close the local fd right away. The program stays alive
+    // until detached.
+    close(prog_fd);
+    return rc;
+}
+
+int xdp_uninstall_iface(const char *ifname) {
+    int ifindex = if_nametoindex(ifname);
+    if (ifindex == 0) {
+        pe("xdp-uninstall: if_nametoindex(%s): %m\n", ifname);
+        return -1;
+    }
+    return netlink_xdp_set(ifindex, -1, XDP_FLAGS_DRV_MODE);
+}
+
 void xdp_close(cmd_t *c) {
     ef_xdp_t *xs = c->xdp;
     if (!xs)
