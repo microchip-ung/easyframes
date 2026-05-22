@@ -109,6 +109,11 @@ void print_help() {
     po("     Per-cmd mmap ring; one atomic store per frame plus a periodic\n");
     po("     send() kick. Off by default; the env var EF_TX_RING=1 has the\n");
     po("     same effect as -r.\n");
+    po("  -x                    Force AF_XDP zero-copy TX. Loads an\n");
+    po("     XDP_PASS program on the iface (or reuses one already there)\n");
+    po("     and binds an xsk socket in XDP_ZEROCOPY mode. Fails hard if\n");
+    po("     the driver does not support ZC, so the run is never silently\n");
+    po("     demoted. Mutually exclusive with -r.\n");
     po("  -m                    Batch TX with sendmmsg in the rate path.\n");
     po("     Sends up to 'burst' frames per syscall using a pre-built\n");
     po("     mmsghdr vector. Requires a 'rate ...' on the tx command\n");
@@ -496,6 +501,7 @@ int TIME_OUT_MS = 100;
 int QDISC_BYPASS = 0;
 int TX_RING = 0;
 int MMSG_TX = 0;
+int TX_XDP = 0;
 int IGNORE_LINK_DOWN = 0;
 parse_err_ctx_t PARSE_ERR_CTX;
 
@@ -506,7 +512,7 @@ int main_(int argc, const char *argv[]) {
     };
     int opt;
 
-    while ((opt = getopt_long(argc, (char * const*)argv, "pQvhrmt:c:",
+    while ((opt = getopt_long(argc, (char * const*)argv, "pQvhrxmt:c:",
                               long_opts, NULL)) != -1) {
         switch (opt) {
             case 1:  // --ignore-link-down
@@ -517,6 +523,9 @@ int main_(int argc, const char *argv[]) {
                 QDISC_BYPASS = 1;
                 break;
 
+            case 'x':
+                TX_XDP = 1;
+                break;
 
             case 'r':
                 TX_RING = 1;
@@ -553,6 +562,11 @@ int main_(int argc, const char *argv[]) {
                 print_help();
                 return -1;
         }
+    }
+
+    if (TX_XDP && TX_RING) {
+        pe("error: -x is mutually exclusive with -r\n");
+        return -1;
     }
 
     return argc_cmds(argc - optind, argv + optind);

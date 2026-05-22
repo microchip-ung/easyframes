@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 #include "ef.h"
+#include "ef-xdp.h"
 
 #include <stdio.h>
 #include <unistd.h>
@@ -158,7 +159,25 @@ int pfds_fill(cmd_socket_t *resources, int res_valid, struct pollfd *pfds,
         if (resources[i].has_tx)
             events |= POLLOUT;
 
-        pfds[i].fd = resources[i].fd;
+        // AF_XDP TX uses a separate xsk fd. AF_PACKET is always
+        // writable so polling its fd for POLLOUT busy-loops; the xsk
+        // fd's POLLOUT reflects actual TX-ring drain. RX still goes
+        // through the AF_PACKET fd, so the swap only applies to TX-
+        // only resources.
+        if (TX_XDP && resources[i].has_tx && !resources[i].has_rx) {
+            int xfd = -1;
+            cmd_ptr = resources[i].cmd;
+            while (cmd_ptr) {
+                if (cmd_ptr->type == CMD_TYPE_TX && cmd_ptr->xdp) {
+                    xfd = xdp_socket_fd(cmd_ptr);
+                    break;
+                }
+                cmd_ptr = cmd_ptr->next;
+            }
+            pfds[i].fd = xfd >= 0 ? xfd : resources[i].fd;
+        } else {
+            pfds[i].fd = resources[i].fd;
+        }
         pfds[i].events = events;
         pfds[i].revents = 0;
 
@@ -391,6 +410,76 @@ int send_txring_ready_pfds(cmd_socket_t *resources, int res_valid,
     return 0;
 }
 
+// AF_XDP zero-copy TX path. Line-for-line analogue of
+// send_txring_ready_pfds: fill descriptors up to a per-iteration
+// budget, drain completions, declare the cmd done only when every
+// submitted descriptor has come back through the completion ring.
+int send_xdp_ready_pfds(cmd_socket_t *resources, int res_valid,
+                        struct pollfd *pfds) {
+    cmd_t *cmd_ptr;
+    buf_t *b;
+    int    i;
+
+    for (i = 0; i < res_valid; i++) {
+        if (!(pfds[i].revents & POLLOUT))
+            continue;
+
+        for (cmd_ptr = resources[i].cmd; cmd_ptr; cmd_ptr = cmd_ptr->next) {
+            int    submitted;
+            int    budget;
+            size_t in_flight;
+
+            if (cmd_ptr->type != CMD_TYPE_TX)
+                continue;
+            if (cmd_ptr->done)
+                continue;
+            if (!cmd_ptr->xdp)
+                continue;
+
+            if (cmd_ptr->repeat > 0) {
+                if (cmd_ptr->rate_pps > 0)
+                    budget = rate_burst_available(cmd_ptr);
+                else
+                    budget = 1024;  // ring depth is 2048, leave headroom
+                if (budget > 0) {
+                    if ((uint32_t)budget > cmd_ptr->repeat)
+                        budget = (int)cmd_ptr->repeat;
+                    submitted = xdp_send(cmd_ptr, budget);
+                    if (submitted < 0) {
+                        cmd_ptr->done = 1;
+                        resources[i].tx_err_cnt++;
+                        break;
+                    }
+                    if (submitted > 0) {
+                        if (cmd_ptr->rate_pps > 0)
+                            rate_consume_n(cmd_ptr, submitted);
+                        cmd_ptr->repeat -= (uint32_t)submitted;
+                    }
+                }
+            }
+
+            in_flight = xdp_unsent(cmd_ptr);
+            if (cmd_ptr->repeat == 0) {
+                if (in_flight == 0) {
+                    b = cmd_ptr->frame_buf;
+                    po("TX     %16s: ", cmd_ptr->arg0);
+                    if (cmd_ptr->name)
+                        po("name %s", cmd_ptr->name);
+                    else
+                        print_hex_str(1, b->data, b->size);
+                    po("\n");
+                    cmd_ptr->done = 1;
+                } else {
+                    xdp_kick(cmd_ptr);
+                }
+            }
+            break;
+        }
+    }
+
+    return 0;
+}
+
 int pfds_process(cmd_socket_t *resources, int res_valid, struct pollfd *pfds,
                  int has_rate) {
     int i, res, match, old_size;
@@ -498,6 +587,8 @@ int pfds_process(cmd_socket_t *resources, int res_valid, struct pollfd *pfds,
         bfree(b);
     }
 
+    if (TX_XDP)
+        return send_xdp_ready_pfds(resources, res_valid, pfds);
     if (TX_RING)
         return send_txring_ready_pfds(resources, res_valid, pfds);
     if (has_rate)
@@ -749,6 +840,24 @@ int exec_cmds(int cnt, cmd_t *cmds) {
         }
     }
 
+    // AF_XDP setup. -x is a hard opt-in: any failure aborts the run.
+    // rate_init is required for the XDP path even without 'rate', so
+    // rate_burst_available has a configured burst to clamp the per-
+    // iteration submit budget.
+    if (TX_XDP) {
+        for (i = 0; i < res_valid; i++) {
+            cmd_t *cp;
+            for (cp = resources[i].cmd; cp; cp = cp->next) {
+                if (cp->type != CMD_TYPE_TX)
+                    continue;
+                if (cp->rate_pps == 0 && cp->rate_burst == 0)
+                    rate_init(cp);
+                if (xdp_init(cp, cp->arg0) < 0)
+                    return -1;
+            }
+        }
+    }
+
     ts_clear(&ts_now);
     ts_clear(&ts_end);
     ts_clear(&ts_left);
@@ -820,6 +929,14 @@ int exec_cmds(int cnt, cmd_t *cmds) {
             for (cp = resources[i].cmd; cp; cp = cp->next)
                 if (cp->type == CMD_TYPE_TX)
                     txring_close(cp);
+        }
+    }
+    if (TX_XDP) {
+        for (i = 0; i < res_valid; i++) {
+            cmd_t *cp;
+            for (cp = resources[i].cmd; cp; cp = cp->next)
+                if (cp->type == CMD_TYPE_TX)
+                    xdp_close(cp);
         }
     }
     for (i = 0; i < res_valid; i++) {

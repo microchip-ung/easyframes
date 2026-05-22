@@ -61,6 +61,7 @@ extern int TIME_OUT_MS;
 extern int QDISC_BYPASS;
 extern int TX_RING;            // -r enables PACKET_TX_RING for all TX cmds
 extern int MMSG_TX;            // -m batches TX with sendmmsg in the rate path
+extern int TX_XDP;             // -x forces AF_XDP zero-copy TX
 extern int IGNORE_LINK_DOWN;   // --ignore-link-down: retry on ENETDOWN (txring)
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -351,6 +352,8 @@ typedef struct cmd {
     size_t  txring_frame_nr;   // total slots (always power of 2)
     size_t  txring_mask;       // frame_nr - 1
     size_t  txring_head;       // producer index
+
+    struct ef_xdp *xdp;        // AF_XDP zero-copy TX state, NULL if unused
 
     // Pre-built sendmmsg vector (allocated by rate_init when -m is set or
     // rate is in use). All entries point to the same frame_buf; caller

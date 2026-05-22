@@ -86,6 +86,7 @@ add_library(libef STATIC
     src/ef-txring.c
     src/ef-udp.c
     src/ef-vlan.c
+    src/ef-xdp.c
     ${version_file}
 )
 
