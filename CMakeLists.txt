@@ -47,7 +47,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules ${CMAKE_MODULE_P
 # Make a version file containing the current version from git.
 #
 include(GetGitRevisionDescription)
-git_describe(VERSION --tags --dirty=-dirty)
+git_describe(VERSION --tags --always --dirty=-dirty)
 
 #parse the version information into pieces.
 string(REGEX REPLACE "^v([0-9]+)\\..*" "\\1" VERSION_MAJOR "${VERSION}")
