@@ -361,6 +361,160 @@ TEST_CASE("rx ign: ipv6 filter does not absorb unexpected non-IPv6 frames",
     cmd_destruct(&ign_cmd);
 }
 
+TEST_CASE("rx ign name: resolution propagates frame_size_no_padding",
+          "[rx_ign]") {
+    const char *name_argv[] = {"name", "noise", "eth",
+                               "dmac", "ff:ff:ff:ff:ff:ff",
+                               "smac", "aa:bb:cc:dd:ee:ff"};
+    const char *ign_argv[] = {"rx", "eth0", "ign", "name", "noise"};
+
+    cmd_t cmds[2];
+    memset(cmds, 0, sizeof(cmds));
+    REQUIRE(argc_cmd(7, name_argv, &cmds[0]) == 7);
+    REQUIRE(argc_cmd(5, ign_argv, &cmds[1]) == 5);
+
+    CHECK(cmds[1].rx_ign == 1);
+    CHECK(cmds[1].frame_buf == NULL);
+    CHECK(cmds[1].frame_size_no_padding == 0);
+    REQUIRE(cmds[0].frame_size_no_padding > 0);
+
+    REQUIRE(resolve_named_frames(2, cmds) == 0);
+
+    REQUIRE(cmds[1].frame_buf != NULL);
+    CHECK(cmds[1].frame_size_no_padding > 0);
+    CHECK(cmds[1].frame_size_no_padding == cmds[0].frame_size_no_padding);
+
+    cmd_destruct(&cmds[0]);
+    cmd_destruct(&cmds[1]);
+}
+
+TEST_CASE("rx ign name: absorbs an identical frame, rejects a different one",
+          "[rx_ign]") {
+    const char *name_argv[] = {"name", "noise", "eth",
+                               "dmac", "90:90:11:00:01:0f",
+                               "smac", "aa:bb:cc:dd:ee:ff"};
+    const char *ign_argv[] = {"rx", "eth0", "ign", "name", "noise"};
+
+    cmd_t cmds[2];
+    memset(cmds, 0, sizeof(cmds));
+    REQUIRE(argc_cmd(7, name_argv, &cmds[0]) == 7);
+    REQUIRE(argc_cmd(5, ign_argv, &cmds[1]) == 5);
+    REQUIRE(resolve_named_frames(2, cmds) == 0);
+
+    frame_t *same = parse_frame_wrap({"eth", "dmac", "90:90:11:00:01:0f",
+                                     "smac", "aa:bb:cc:dd:ee:ff"});
+    REQUIRE(same != NULL);
+    buf_t *same_buf = frame_to_buf(same);
+    CHECK(ign_absorbs(cmds[1], same_buf) == 1);
+
+    frame_t *other = parse_frame_wrap({"eth", "dmac", "90:90:11:00:01:0e",
+                                      "smac", "aa:bb:cc:dd:ee:ff"});
+    REQUIRE(other != NULL);
+    buf_t *other_buf = frame_to_buf(other);
+    CHECK(ign_absorbs(cmds[1], other_buf) == 0);
+
+    CHECK(cmds[1].done == 0);
+
+    bfree(same_buf);
+    bfree(other_buf);
+    frame_free(same);
+    frame_free(other);
+    cmd_destruct(&cmds[0]);
+    cmd_destruct(&cmds[1]);
+}
+
+TEST_CASE("rx ign name: longer frame matched on header bytes only", "[rx_ign]") {
+    const char *name_argv[] = {"name", "v6", "eth", "dmac", "ign", "smac", "ign",
+                               "et", "0x86dd"};
+    const char *ign_argv[] = {"rx", "eth0", "ign", "name", "v6"};
+
+    cmd_t cmds[2];
+    memset(cmds, 0, sizeof(cmds));
+    REQUIRE(argc_cmd(9, name_argv, &cmds[0]) == 9);
+    REQUIRE(argc_cmd(5, ign_argv, &cmds[1]) == 5);
+    REQUIRE(resolve_named_frames(2, cmds) == 0);
+    REQUIRE(cmds[1].frame_mask_buf != NULL);
+
+    frame_t *rs = parse_frame_wrap({"eth", "dmac", "33:33:0:0:0:2",
+                                    "smac", "56:b0:b3:5b:57:9b",
+                                    "et", "0x86dd", "ipv6", "next", "58",
+                                    "icmp", "type", "133", "code", "0",
+                                    "hd", "0"});
+    REQUIRE(rs != NULL);
+    buf_t *rs_buf = frame_to_buf(rs);
+    REQUIRE(rs_buf->size > cmds[1].frame_size_no_padding);
+    CHECK(ign_absorbs(cmds[1], rs_buf) == 1);
+
+    frame_t *arp = parse_frame_wrap({"eth", "dmac", "ff:ff:ff:ff:ff:ff",
+                                     "smac", "::1", "arp"});
+    REQUIRE(arp != NULL);
+    buf_t *arp_buf = frame_to_buf(arp);
+    CHECK(ign_absorbs(cmds[1], arp_buf) == 0);
+
+    bfree(rs_buf);
+    bfree(arp_buf);
+    frame_free(rs);
+    frame_free(arp);
+    cmd_destruct(&cmds[0]);
+    cmd_destruct(&cmds[1]);
+}
+
+TEST_CASE("rx ign: inline spec is untouched by name resolution", "[rx_ign]") {
+    const char *name_argv[] = {"name", "noise", "eth", "dmac", "::9",
+                               "smac", "::8"};
+    const char *ign_argv[] = {"rx", "eth0", "ign", "eth",
+                              "dmac", "ff:ff:ff:ff:ff:ff",
+                              "smac", "aa:bb:cc:dd:ee:ff"};
+
+    cmd_t cmds[2];
+    memset(cmds, 0, sizeof(cmds));
+    REQUIRE(argc_cmd(7, name_argv, &cmds[0]) == 7);
+    REQUIRE(argc_cmd(8, ign_argv, &cmds[1]) == 8);
+
+    size_t hdr = cmds[1].frame_size_no_padding;
+    REQUIRE(hdr > 0);
+    REQUIRE(resolve_named_frames(2, cmds) == 0);
+    CHECK(cmds[1].frame_size_no_padding == hdr);
+    CHECK(cmds[1].name == NULL);
+
+    frame_t *f = parse_frame_wrap({"eth", "dmac", "ff:ff:ff:ff:ff:ff",
+                                   "smac", "aa:bb:cc:dd:ee:ff"});
+    REQUIRE(f != NULL);
+    buf_t *rx = frame_to_buf(f);
+    CHECK(ign_absorbs(cmds[1], rx) == 1);
+
+    bfree(rx);
+    frame_free(f);
+    cmd_destruct(&cmds[0]);
+    cmd_destruct(&cmds[1]);
+}
+
+TEST_CASE("rx name without ign: regular match still works", "[rx_ign]") {
+    const char *name_argv[] = {"name", "f", "eth", "dmac", "::1", "smac", "::2"};
+    const char *rx_argv[] = {"rx", "eth0", "name", "f"};
+
+    cmd_t cmds[2];
+    memset(cmds, 0, sizeof(cmds));
+    REQUIRE(argc_cmd(7, name_argv, &cmds[0]) == 7);
+    REQUIRE(argc_cmd(4, rx_argv, &cmds[1]) == 4);
+    REQUIRE(resolve_named_frames(2, cmds) == 0);
+
+    CHECK(cmds[1].rx_ign == 0);
+    REQUIRE(cmds[1].frame != NULL);
+
+    frame_t *f = parse_frame_wrap({"eth", "dmac", "::1", "smac", "::2"});
+    REQUIRE(f != NULL);
+    buf_t *rx = frame_to_buf(f);
+
+    CHECK(bequal_mask(rx, cmds[1].frame_buf, cmds[1].frame_mask_buf,
+                      cmds[1].frame->padding_len) == 1);
+
+    bfree(rx);
+    frame_free(f);
+    cmd_destruct(&cmds[0]);
+    cmd_destruct(&cmds[1]);
+}
+
 TEST_CASE("rx ign with header-level ign: matches any IPv6 content", "[rx_ign]") {
     // ign on eth fields + ipv6 header, matches any IPv6 frame of same structure
     const char *ign_argv[] = {"rx", "eth0", "ign", "eth", "ign", "ipv6", "ign"};

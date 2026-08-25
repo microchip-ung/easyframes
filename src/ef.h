@@ -371,6 +371,7 @@ typedef struct {
 } cmd_socket_t;
 
 int exec_cmds(int cnt, cmd_t *cmds);
+int resolve_named_frames(int cnt, cmd_t *cmds);
 
 void rate_init(cmd_t *c);
 void rate_refill(cmd_t *c, struct timespec *now);

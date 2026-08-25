@@ -556,10 +556,33 @@ static int copy_cmd_by_name(const char *name, int cnt, cmd_t *cmds, cmd_t *dst) 
         dst->frame = frame_clone(cmds[i].frame);
         dst->frame_buf = bclone(cmds[i].frame_buf);
         dst->frame_mask_buf = bclone(cmds[i].frame_mask_buf);
+        dst->frame_size_no_padding = cmds[i].frame_size_no_padding;
         return 0;
     }
 
     return -1;
+}
+
+int resolve_named_frames(int cnt, cmd_t *cmds) {
+    int i, err = 0;
+
+    for (i = 0; i < cnt; i++) {
+        if (cmds[i].type == CMD_TYPE_NAME)
+            continue;
+
+        if (!cmds[i].name)
+            continue;
+
+        if (cmds[i].frame_buf)
+            continue;
+
+        if (copy_cmd_by_name(cmds[i].name, cnt, cmds, &cmds[i]) != 0) {
+            pe("No frame in inventory called %s\n", cmds[i].name);
+            err ++;
+        }
+    }
+
+    return err;
 }
 
 #ifdef HAS_LIBPCAP
@@ -673,21 +696,7 @@ int exec_cmds(int cnt, cmd_t *cmds) {
     }
 
     // Pair named frames
-    for (i = 0; i < cnt; i++) {
-        if (cmds[i].type == CMD_TYPE_NAME)
-            continue;
-
-        if (!cmds[i].name)
-            continue;
-
-        if (cmds[i].frame_buf)
-            continue;
-
-        if (copy_cmd_by_name(cmds[i].name, cnt, cmds, &cmds[i]) != 0) {
-            pe("No frame in inventory called %s\n", cmds[i].name);
-            err ++;
-        }
-    }
+    err = resolve_named_frames(cnt, cmds);
 
     if (err)
         return err;
