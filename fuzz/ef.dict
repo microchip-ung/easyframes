@@ -46,6 +46,9 @@
 "mrp_topo"
 "mrp_tst"
 
+# Headers LLC
+"llc"
+
 # Headers PTP
 "ptp-announce"
 "ptp-follow-up"
@@ -167,6 +170,11 @@
 "hdr-correctionField"
 "hdr-flagField"
 "hdr-logMessageInterval"
+
+# Field names LLC
+"dsap"
+"ssap"
+"ctrl"
 
 # Field names OAM
 "opcode"
