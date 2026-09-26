@@ -49,6 +49,10 @@
 # Headers LLC
 "llc"
 
+# Headers STP
+"stp"
+"stp_tcn"
+
 # Headers PTP
 "ptp-announce"
 "ptp-follow-up"
@@ -175,6 +179,20 @@
 "dsap"
 "ssap"
 "ctrl"
+
+# Field names STP
+"tc"
+"tcack"
+"root_prio"
+"root_mac"
+"root_cost"
+"bridge_prio"
+"bridge_mac"
+"port"
+"msg_age"
+"max_age"
+"hello"
+"fwd_delay"
 
 # Field names OAM
 "opcode"

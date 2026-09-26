@@ -596,6 +596,7 @@ void opcua_init();
 void coap_init();
 void sv_init();
 void llc_init();
+void stp_init();
 
 void init() __attribute__ ((constructor));
 void init() {
@@ -619,6 +620,7 @@ void init() {
     coap_init();
     sv_init();
     llc_init();
+    stp_init();
 }
 
 void ifh_uninit();
@@ -641,6 +643,7 @@ void opcua_uninit();
 void coap_uninit();
 void sv_uninit();
 void llc_uninit();
+void stp_uninit();
 
 void uninit() __attribute__ ((destructor));
 void uninit() {
@@ -664,5 +667,6 @@ void uninit() {
     coap_uninit();
     sv_uninit();
     llc_uninit();
+    stp_uninit();
 }
 
