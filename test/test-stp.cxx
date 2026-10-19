@@ -91,6 +91,203 @@ TEST_CASE("stp: tc and tcack are bit 0 and bit 7 of flags", "[stp]") {
     frame_free(both);
 }
 
+// The six bits between tc and tcack, which only the rapid protocol sets.
+// 802.1Q table 13-5, read against the flags octet at offset 21.
+TEST_CASE("stp: every flag bit lands in its own bit of the flags octet",
+          "[stp]") {
+    struct { const char *field; const char *value; uint8_t expect; } cases[] = {
+        { "tc",         "1", 0x01 },
+        { "proposal",   "1", 0x02 },
+        { "role",       "1", 0x04 },   // alternate or backup
+        { "role",       "2", 0x08 },   // root
+        { "role",       "3", 0x0c },   // designated
+        { "learning",   "1", 0x10 },
+        { "forwarding", "1", 0x20 },
+        { "agreement",  "1", 0x40 },
+        { "tcack",      "1", 0x80 },
+    };
+
+    for (auto &c : cases) {
+        frame_t *f = parse_frame_wrap({"eth", "llc", "stp", c.field, c.value});
+        REQUIRE(f != nullptr);
+
+        buf_t *b = frame_to_buf(f);
+        REQUIRE(b != nullptr);
+
+        // Only the named bit may be set, so the whole octet is the expectation.
+        INFO("stp " << c.field << " " << c.value);
+        CHECK(b->data[21] == c.expect);
+
+        bfree(b);
+        frame_free(f);
+    }
+}
+
+TEST_CASE("stp: a designated port proposing sets four flag bits", "[stp]") {
+    // What a designated port offers at the start of the clause 13.35
+    // handshake: proposal, role designated, learning and forwarding.
+    frame_t *named = parse_frame_wrap({
+        "eth", "llc",
+        "stp", "proposal", "1", "role", "3",
+               "learning", "1", "forwarding", "1",
+    });
+    frame_t *byte = parse_frame_wrap({"eth", "llc", "stp", "flags", "0x3e"});
+    REQUIRE(named != nullptr);
+    REQUIRE(byte != nullptr);
+
+    buf_t *b_named = frame_to_buf(named);
+    buf_t *b_byte = frame_to_buf(byte);
+    REQUIRE(b_named != nullptr);
+    REQUIRE(b_byte != nullptr);
+
+    // Naming the bits and spelling out the byte must agree.
+    CHECK(b_named->data[21] == 0x3e);
+    CHECK(bequal(b_named, b_byte) == 1);
+
+    bfree(b_named);
+    bfree(b_byte);
+    frame_free(named);
+    frame_free(byte);
+}
+
+TEST_CASE("stp: an unnamed flag bit stays out of the rx mask", "[stp]") {
+    // Each bit alias overlays a byte that is itself a field, so an alias
+    // carries rx_match_skip and only enters the mask when it is named.
+    // Without that, "flags ign" could not narrow the byte at all.
+    frame_t *one = parse_frame_wrap({
+        "eth", "llc", "stp", "flags", "ign", "agreement", "1",
+    });
+    frame_t *two = parse_frame_wrap({
+        "eth", "llc", "stp", "flags", "ign", "agreement", "1", "role", "3",
+    });
+    REQUIRE(one != nullptr);
+    REQUIRE(two != nullptr);
+
+    buf_t *m_one = frame_mask_to_buf(one);
+    buf_t *m_two = frame_mask_to_buf(two);
+    REQUIRE(m_one != nullptr);
+    REQUIRE(m_two != nullptr);
+
+    CHECK(m_one->data[21] == 0x40);   // agreement alone
+    CHECK(m_two->data[21] == 0x4c);   // agreement and the two role bits
+
+    bfree(m_one);
+    bfree(m_two);
+    frame_free(one);
+    frame_free(two);
+}
+
+TEST_CASE("stp: ignoring a flag bit takes it out of the rx mask", "[stp]") {
+    // "flags" is itself in the mask unless ignored, so an ignored bit alias
+    // has to clear its own bits from it rather than merely add nothing.
+    struct { const char *field; uint8_t expect; } cases[] = {
+        { "tc",         0xfe },
+        { "proposal",   0xfd },
+        { "role",       0xf3 },
+        { "learning",   0xef },
+        { "forwarding", 0xdf },
+        { "agreement",  0xbf },
+        { "tcack",      0x7f },
+    };
+
+    for (const char *hdr : {"stp"}) {
+        for (auto &c : cases) {
+            frame_t *f = parse_frame_wrap({"eth", "llc", hdr, c.field, "ign"});
+            REQUIRE(f != nullptr);
+            CHECK(f->has_mask == 1);
+
+            buf_t *mask = frame_mask_to_buf(f);
+            REQUIRE(mask != nullptr);
+
+            INFO(hdr << " " << c.field << " ign");
+            CHECK(mask->data[21] == c.expect);
+            // The rest of the BPDU is still compared.
+            CHECK(mask->data[20] == 0xff);
+            CHECK(mask->data[22] == 0xff);
+
+            bfree(mask);
+            frame_free(f);
+        }
+    }
+}
+
+TEST_CASE("stp: a BPDU differing only in an ignored bit still matches",
+          "[stp]") {
+    // "tc ign" must accept a BPDU whatever its tc bit, which it cannot do if
+    // the flags byte around it is still compared in full.
+    frame_t *expect = parse_frame_wrap({"eth", "llc", "stp", "tc", "ign"});
+    frame_t *rx_tc = parse_frame_wrap({"eth", "llc", "stp", "tc", "1"});
+    frame_t *rx_ack = parse_frame_wrap({"eth", "llc", "stp", "tcack", "1"});
+    REQUIRE(expect != nullptr);
+    REQUIRE(rx_tc != nullptr);
+    REQUIRE(rx_ack != nullptr);
+
+    buf_t *b_expect = frame_to_buf(expect);
+    buf_t *mask = frame_mask_to_buf(expect);
+    buf_t *b_tc = frame_to_buf(rx_tc);
+    buf_t *b_ack = frame_to_buf(rx_ack);
+    REQUIRE(b_expect != nullptr);
+    REQUIRE(mask != nullptr);
+    REQUIRE(b_tc != nullptr);
+    REQUIRE(b_ack != nullptr);
+
+    CHECK(bequal_mask(b_tc, b_expect, mask, 0) == 1);
+    // Ignoring tc must not loosen the other seven bits.
+    CHECK(bequal_mask(b_ack, b_expect, mask, 0) == 0);
+
+    bfree(b_expect);
+    bfree(mask);
+    bfree(b_tc);
+    bfree(b_ack);
+    frame_free(expect);
+    frame_free(rx_tc);
+    frame_free(rx_ack);
+}
+
+TEST_CASE("stp: an ignored bit clears the mask whatever the field order",
+          "[stp]") {
+    // flags comes before tc in the field list, but the bit must come out of
+    // an explicitly-set flags byte however the command line orders them.
+    frame_t *a = parse_frame_wrap({"eth", "llc", "stp", "flags", "0x81",
+                                   "tc", "ign"});
+    frame_t *b = parse_frame_wrap({"eth", "llc", "stp", "tc", "ign",
+                                   "flags", "0x81"});
+    REQUIRE(a != nullptr);
+    REQUIRE(b != nullptr);
+
+    buf_t *m_a = frame_mask_to_buf(a);
+    buf_t *m_b = frame_mask_to_buf(b);
+    REQUIRE(m_a != nullptr);
+    REQUIRE(m_b != nullptr);
+
+    CHECK(m_a->data[21] == 0xfe);
+    CHECK(m_b->data[21] == 0xfe);
+
+    bfree(m_a);
+    bfree(m_b);
+    frame_free(a);
+    frame_free(b);
+}
+
+TEST_CASE("stp: ignoring an overlapping non-overlay field changes nothing",
+          "[stp]") {
+    // IFH fields overlap as alternative encodings of the same bits, not as
+    // views of a wider field. Ignoring one there must not erase the mask of
+    // another that is compared: b1-rew-op stays compared in full.
+    frame_t *f = parse_frame_wrap({"ifh-oc1", "ign", "b1-rew-op", "0",
+                                   "b0-masq-port", "ign", "eth"});
+    REQUIRE(f != nullptr);
+
+    buf_t *mask = frame_mask_to_buf(f);
+    REQUIRE(mask != nullptr);
+
+    CHECK(mask->data[0] == 0x3f);
+    CHECK(mask->data[1] == 0xe0);
+
+    bfree(mask);
+    frame_free(f);
+}
+
 TEST_CASE("stp: TCN BPDU is a four-byte body", "[stp]") {
     frame_t *f = parse_frame_wrap({
         "eth", "dmac", "01:80:c2:00:00:00", "smac", "00:11:22:33:44:55",
@@ -129,8 +326,9 @@ TEST_CASE("stp: a config BPDU can be matched field by field", "[stp]") {
     REQUIRE(mask != nullptr);
 
     // "flags ign tc 1" must still pin tc, so only bit 0 of the flags byte
-    // is compared and the received value must have it set.
-    CHECK(mask->data[21] == 0x81);
+    // is compared and the received value must have it set. The other seven
+    // bit aliases carry rx_match_skip, so an unnamed one adds nothing.
+    CHECK(mask->data[21] == 0x01);
     CHECK(bequal_mask(b_exact, b_masked, mask, 0) == 1);
 
     bfree(b_exact);

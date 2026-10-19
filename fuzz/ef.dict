@@ -182,6 +182,11 @@
 
 # Field names STP
 "tc"
+"proposal"
+"role"
+"learning"
+"forwarding"
+"agreement"
 "tcack"
 "root_prio"
 "root_mac"

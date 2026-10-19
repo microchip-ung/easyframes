@@ -349,6 +349,7 @@ int hdr_parse_fields(frame_t *frame, struct hdr *hdr, int offset,
         if (field_ignore) {
             field_ignore = 0;
             f->rx_match_skip = 1;
+            f->rx_match_ign = 1;
             i += 1;
             continue;
         }
@@ -369,6 +370,7 @@ int hdr_parse_fields(frame_t *frame, struct hdr *hdr, int offset,
         if (strcmp(argv[i], "ign") == 0 || strcmp(argv[i], "ignore") == 0) {
             frame->has_mask = 1;
             f->rx_match_skip = 1;
+            f->rx_match_ign = 1;
             i += 1;
             continue;
         }
@@ -397,6 +399,7 @@ int hdr_parse_fields(frame_t *frame, struct hdr *hdr, int offset,
             i += 1;
         }
         f->rx_match_skip = 0;
+        f->rx_match_ign = 0;
     }
 
     return i;
@@ -447,7 +450,22 @@ static int hdr_copy_to_buf_(hdr_t *hdr, size_t offset, buf_t *buf, int mask) {
         }
     }
 
-    return i;
+    // An overlay field (a flag bit inside a flags byte) that was given "ign"
+    // must take its bits back out of the byte around it, which the loop
+    // above may have masked in. Only overlays do this: elsewhere, overlapping
+    // fields are alternative encodings and an ignored one must not erase the
+    // bits of another that is compared.
+    for (i = 0, f = hdr->fields; mask && i < hdr->fields_size; ++i, ++f) {
+        if (!f->overlay || !f->rx_match_ign)
+            continue;
+
+        maskb = balloc(BIT_TO_BYTE(f->bit_width));
+        hdr_write_field(buf, offset, f, maskb);
+        bfree(maskb);
+        maskb = 0;
+    }
+
+    return hdr->fields_size;
 }
 
 int hdr_copy_to_buf_mask(hdr_t *hdr, size_t offset, buf_t *buf) {
