@@ -8,6 +8,13 @@
 // type/length field carries a length, followed by an 802.2 LLC header and the
 // BPDU body. These tests pin the byte layout of both BPDU types.
 
+// RAII guard to set NO_PAD for the duration of a scope, as in
+// test-padding.cxx.
+struct NoPadGuard {
+    NoPadGuard()  { NO_PAD = 1; }
+    ~NoPadGuard() { NO_PAD = 0; }
+};
+
 // ef pads short frames to 60 bytes. Append the zeros rather than spelling them
 // out, so the expectation says "this body, then padding" and cannot drift.
 static std::string padded(const std::string &body) {
@@ -190,7 +197,7 @@ TEST_CASE("stp: ignoring a flag bit takes it out of the rx mask", "[stp]") {
         { "tcack",      0x7f },
     };
 
-    for (const char *hdr : {"stp"}) {
+    for (const char *hdr : {"stp", "stp_rst"}) {
         for (auto &c : cases) {
             frame_t *f = parse_frame_wrap({"eth", "llc", hdr, c.field, "ign"});
             REQUIRE(f != nullptr);
@@ -303,6 +310,117 @@ TEST_CASE("stp: TCN BPDU is a four-byte body", "[stp]") {
     frame_free(f);
 }
 
+// An RST BPDU, 802.1Q clause 14.4: version 2, type 0x02, and a 36-octet body
+// -- the configuration BPDU's 35 plus the Version 1 Length, which is 0.
+static const char *bpdu_rst_body =
+    "0180c20000000011223344550027"           // eth, 802.3 length 39
+    "424203"                                 // llc dsap/ssap/ctrl
+    "0000" "02" "02" "00"                    // proto, ver=2, type=RST, flags
+    "8000" "001122334400"                    // root id
+    "00000000"                               // root path cost
+    "8000" "001122334400"                    // bridge id
+    "8001"                                   // port id
+    "0000" "1400" "0200" "0f00"              // msg age, max age, hello, fwd
+    "00";                                    // version 1 length
+
+TEST_CASE("stp: RST BPDU body is 36 octets, one more than a config BPDU",
+          "[stp]") {
+    frame_t *rst = parse_frame_wrap({
+        "eth", "dmac", "01:80:c2:00:00:00", "smac", "00:11:22:33:44:55",
+        "llc",
+        "stp_rst", "root_mac", "00:11:22:33:44:00",
+                   "bridge_mac", "00:11:22:33:44:00",
+    });
+    REQUIRE(rst != nullptr);
+
+    CHECK(hexstr(frame_to_buf(rst)) == padded(bpdu_rst_body));
+
+    frame_free(rst);
+}
+
+TEST_CASE("stp: the RST body is one octet longer than the config body",
+          "[stp]") {
+    // Padding would hide the difference, and so would comparing against a
+    // hand-written expectation: measure both bodies on the same frame stack.
+    NoPadGuard no_pad;
+
+    frame_t *rst = parse_frame_wrap({"eth", "llc", "stp_rst"});
+    frame_t *cfg = parse_frame_wrap({"eth", "llc", "stp"});
+    REQUIRE(rst != nullptr);
+    REQUIRE(cfg != nullptr);
+
+    buf_t *b_rst = frame_to_buf(rst);
+    buf_t *b_cfg = frame_to_buf(cfg);
+    REQUIRE(b_rst != nullptr);
+    REQUIRE(b_cfg != nullptr);
+
+    // eth(14) + llc(3) + body.
+    CHECK(b_cfg->size - 17 == 35);
+    CHECK(b_rst->size - 17 == 36);
+
+    // The 802.3 length counts the LLC header plus the body, so it moves too.
+    CHECK(b_cfg->data[12] == 0x00);
+    CHECK(b_cfg->data[13] == 0x26);
+    CHECK(b_rst->data[12] == 0x00);
+    CHECK(b_rst->data[13] == 0x27);
+
+    bfree(b_rst);
+    bfree(b_cfg);
+    frame_free(rst);
+    frame_free(cfg);
+}
+
+TEST_CASE("stp: every RST field can be set explicitly", "[stp]") {
+    frame_t *f = parse_frame_wrap({
+        "eth", "dmac", "01:80:c2:00:00:00", "smac", "00:11:22:33:44:55",
+        "llc", "dsap", "0x42", "ssap", "0x42", "ctrl", "0x03",
+        "stp_rst", "proto", "0x0000", "ver", "2", "type", "0x02", "flags", "0",
+                   "root_prio", "0x8000", "root_mac", "00:11:22:33:44:00",
+                   "root_cost", "0",
+                   "bridge_prio", "0x8000", "bridge_mac", "00:11:22:33:44:00",
+                   "port", "0x8001",
+                   "msg_age", "0x0000", "max_age", "0x1400",
+                   "hello", "0x0200", "fwd_delay", "0x0f00",
+                   "v1_len", "0",
+    });
+    REQUIRE(f != nullptr);
+
+    // Spelling out every field must land on the same bytes as the defaults.
+    CHECK(hexstr(frame_to_buf(f)) == padded(bpdu_rst_body));
+
+    frame_free(f);
+}
+
+TEST_CASE("stp: RST flags sit in the same octet as a config BPDU's", "[stp]") {
+    // The clause 13.35 handshake on the wire. flags is at eth(14) + llc(3) +
+    // proto/ver/type(4) = offset 21, unmoved by the extra trailing octet.
+    frame_t *propose = parse_frame_wrap({
+        "eth", "llc",
+        "stp_rst", "proposal", "1", "role", "3",
+                   "learning", "1", "forwarding", "1",
+    });
+    frame_t *agree = parse_frame_wrap({
+        "eth", "llc", "stp_rst", "agreement", "1", "role", "2",
+    });
+    REQUIRE(propose != nullptr);
+    REQUIRE(agree != nullptr);
+
+    buf_t *b_propose = frame_to_buf(propose);
+    buf_t *b_agree = frame_to_buf(agree);
+    REQUIRE(b_propose != nullptr);
+    REQUIRE(b_agree != nullptr);
+
+    // A designated port proposing, learning and forwarding.
+    CHECK(b_propose->data[21] == 0x3e);
+    // A root port agreeing.
+    CHECK(b_agree->data[21] == 0x48);
+
+    bfree(b_propose);
+    bfree(b_agree);
+    frame_free(propose);
+    frame_free(agree);
+}
+
 TEST_CASE("stp: a config BPDU can be matched field by field", "[stp]") {
     // What an "rx" command builds: a value buf and a mask with every
     // specified field set to all-ones. Mirrors argc_cmd() in ef-args.c.
@@ -336,4 +454,60 @@ TEST_CASE("stp: a config BPDU can be matched field by field", "[stp]") {
     bfree(mask);
     frame_free(exact);
     frame_free(masked);
+}
+
+TEST_CASE("stp: an RST BPDU can be matched field by field", "[stp]") {
+    // The same as the config BPDU case, on the 36-octet template, where the
+    // mask must reach the trailing v1_len octet as well.
+    frame_t *exact = parse_frame_wrap({
+        "eth", "dmac", "01:80:c2:00:00:00", "smac", "00:11:22:33:44:55",
+        "llc", "stp_rst", "agreement", "1", "role", "2",
+    });
+    frame_t *masked = parse_frame_wrap({
+        "eth", "dmac", "01:80:c2:00:00:00", "smac", "00:11:22:33:44:55",
+        "llc", "stp_rst", "flags", "ign", "agreement", "1",
+    });
+    frame_t *other = parse_frame_wrap({
+        "eth", "dmac", "01:80:c2:00:00:00", "smac", "00:11:22:33:44:55",
+        "llc", "stp_rst", "role", "2",
+    });
+    REQUIRE(exact != nullptr);
+    REQUIRE(masked != nullptr);
+    REQUIRE(other != nullptr);
+    CHECK(masked->has_mask == 1);
+
+    buf_t *b_exact = frame_to_buf(exact);
+    buf_t *b_masked = frame_to_buf(masked);
+    buf_t *b_other = frame_to_buf(other);
+    buf_t *mask = frame_mask_to_buf(masked);
+    REQUIRE(b_exact != nullptr);
+    REQUIRE(b_masked != nullptr);
+    REQUIRE(b_other != nullptr);
+    REQUIRE(mask != nullptr);
+
+    // Padding would fill a short mask out to 60 bytes with ones, so only an
+    // unpadded mask shows that it really ends at v1_len, the last octet of
+    // eth(14) + llc(3) + 36, and that v1_len is compared.
+    {
+        NoPadGuard no_pad;
+        buf_t *unpadded = frame_mask_to_buf(masked);
+        REQUIRE(unpadded != nullptr);
+        CHECK(unpadded->size == 53);
+        CHECK(unpadded->data[52] == 0xff);
+        bfree(unpadded);
+    }
+
+    // Only agreement is compared in the flags octet, so a root port
+    // agreeing matches and one that does not agree is rejected.
+    CHECK(mask->data[21] == 0x40);
+    CHECK(bequal_mask(b_exact, b_masked, mask, 0) == 1);
+    CHECK(bequal_mask(b_other, b_masked, mask, 0) == 0);
+
+    bfree(b_exact);
+    bfree(b_masked);
+    bfree(b_other);
+    bfree(mask);
+    frame_free(exact);
+    frame_free(masked);
+    frame_free(other);
 }

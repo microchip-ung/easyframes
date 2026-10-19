@@ -316,6 +316,7 @@ typedef enum {
     HDR_TMPL_SV,
     HDR_TMPL_LLC,
     HDR_TMPL_STP,
+    HDR_TMPL_STP_RST,
     HDR_TMPL_STP_TCN,
 
     HDR_TMPL_SIZE,

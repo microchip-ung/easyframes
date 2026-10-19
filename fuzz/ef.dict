@@ -51,6 +51,7 @@
 
 # Headers STP
 "stp"
+"stp_rst"
 "stp_tcn"
 
 # Headers PTP
@@ -198,6 +199,7 @@
 "max_age"
 "hello"
 "fwd_delay"
+"v1_len"
 
 # Field names OAM
 "opcode"
