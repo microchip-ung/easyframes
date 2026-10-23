@@ -163,6 +163,13 @@ typedef struct field {
     const char *name;
     const char *help;
     int         rx_match_skip;
+    // Set when the field itself was given "ign". rx_match_skip alone only
+    // keeps a field from adding to the rx mask; an overlay field also has to
+    // take its bits back out of the field it sits inside.
+    int         rx_match_ign;
+    // The field is a view of bits that another field of the header already
+    // covers, e.g. a flag bit inside a flags byte. See hdr_copy_to_buf_mask.
+    int         overlay;
     int         bit_width;
     int         bit_offset;
     buf_t      *def;
@@ -307,6 +314,10 @@ typedef enum {
     HDR_TMPL_COAP_OPTIONS,
     HDR_TMPL_COAP_PARMS,
     HDR_TMPL_SV,
+    HDR_TMPL_LLC,
+    HDR_TMPL_STP,
+    HDR_TMPL_STP_RST,
+    HDR_TMPL_STP_TCN,
 
     HDR_TMPL_SIZE,
 } hdr_tmpl_t;

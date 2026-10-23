@@ -72,6 +72,7 @@ add_library(libef STATIC
     src/ef-igmp.c
     src/ef-ipv4.c
     src/ef-ipv6.c
+    src/ef-llc.c
     src/ef-mld.c
     src/ef-mrp.c
     src/ef-oam.c
@@ -82,6 +83,7 @@ add_library(libef STATIC
     src/ef-profinet.c
     src/ef-ptp.c
     src/ef-rate.c
+    src/ef-stp.c
     src/ef-sv.c
     src/ef-txring.c
     src/ef-udp.c
@@ -127,6 +129,8 @@ add_executable(ef-tests
     test/test-mld-zero-width.cxx
     test/test-rate-limit.cxx
     test/test-rx-ign.cxx
+    test/test-llc.cxx
+    test/test-stp.cxx
 )
 target_compile_options(ef-tests PRIVATE ${EF_SANITIZE_FLAGS})
 
